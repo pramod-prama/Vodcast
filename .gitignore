@@ -1,0 +1,7 @@
+__pycache__/
+checkpoints/*
+docs/_build/
+# Ignore model weights
+*.pth
+gfpgan/weight/
+uploads/

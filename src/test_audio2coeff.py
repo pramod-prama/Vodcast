@@ -99,10 +99,17 @@ class Audio2Coeff():
             if ref_pose_coeff_path is not None: 
                  coeffs_pred_numpy = self.using_refpose(coeffs_pred_numpy, ref_pose_coeff_path)
         
-            savemat(os.path.join(coeff_save_dir, '%s##%s.mat'%(batch['pic_name'], batch['audio_name'])),  
-                    {'coeff_3dmm': coeffs_pred_numpy})
+            # Fix path handling for Windows and filename length limits
+            # Shorten the filename to avoid Windows path length limits
+            pic_name_short = batch['pic_name'][:50] if len(batch['pic_name']) > 50 else batch['pic_name']
+            audio_name_short = batch['audio_name'][:50] if len(batch['audio_name']) > 50 else batch['audio_name']
+            filename = '%s##%s.mat'%(pic_name_short, audio_name_short)
+            file_path = os.path.join(coeff_save_dir, filename)
+            # Normalize the path to handle double backslashes
+            file_path = os.path.normpath(file_path)
+            savemat(file_path, {'coeff_3dmm': coeffs_pred_numpy})
 
-            return os.path.join(coeff_save_dir, '%s##%s.mat'%(batch['pic_name'], batch['audio_name']))
+            return file_path
     
     def using_refpose(self, coeffs_pred_numpy, ref_pose_coeff_path):
         num_frames = coeffs_pred_numpy.shape[0]

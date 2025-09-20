@@ -41,7 +41,8 @@ class SadTalker():
         ref_info = None,
         use_idle_mode = False,
         length_of_audio = 0, use_blink=True,
-        result_dir='./results/'):
+        result_dir='./results/',
+        progress_cb=None):
 
         self.sadtalker_paths = init_path(self.checkpoint_path, self.config_path, size, False, preprocess)
         print(self.sadtalker_paths)
@@ -49,6 +50,12 @@ class SadTalker():
         self.audio_to_coeff = Audio2Coeff(self.sadtalker_paths, self.device)
         self.preprocess_model = CropAndExtract(self.sadtalker_paths, self.device)
         self.animate_from_coeff = AnimateFromCoeff(self.sadtalker_paths, self.device)
+
+        if callable(progress_cb):
+            try:
+                progress_cb({"stage": "init", "progress": 0, "message": "Initialized models"})
+            except Exception:
+                pass
 
         time_tag = str(uuid.uuid4())
         save_dir = os.path.join(result_dir, time_tag)
@@ -94,6 +101,11 @@ class SadTalker():
         first_frame_dir = os.path.join(save_dir, 'first_frame_dir')
         os.makedirs(first_frame_dir, exist_ok=True)
         first_coeff_path, crop_pic_path, crop_info = self.preprocess_model.generate(pic_path, first_frame_dir, preprocess, True, size)
+        if callable(progress_cb):
+            try:
+                progress_cb({"stage": "preprocess", "progress": 20, "message": "Preprocessed image and extracted 3DMM"})
+            except Exception:
+                pass
         
         if first_coeff_path is None:
             raise AttributeError("No face is detected")
@@ -133,10 +145,20 @@ class SadTalker():
         else:
             batch = get_data(first_coeff_path, audio_path, self.device, ref_eyeblink_coeff_path=ref_eyeblink_coeff_path, still=still_mode, idlemode=use_idle_mode, length_of_audio=length_of_audio, use_blink=use_blink) # longer audio?
             coeff_path = self.audio_to_coeff.generate(batch, save_dir, pose_style, ref_pose_coeff_path)
+            if callable(progress_cb):
+                try:
+                    progress_cb({"stage": "audio2coeff", "progress": 50, "message": "Converted audio to coefficients"})
+                except Exception:
+                    pass
 
         #coeff2video
         data = get_facerender_data(coeff_path, crop_pic_path, first_coeff_path, audio_path, batch_size, still_mode=still_mode, preprocess=preprocess, size=size, expression_scale = exp_scale)
         return_path = self.animate_from_coeff.generate(data, save_dir,  pic_path, crop_info, enhancer='gfpgan' if use_enhancer else None, preprocess=preprocess, img_size=size)
+        if callable(progress_cb):
+            try:
+                progress_cb({"stage": "render", "progress": 85, "message": "Rendered video frames and muxed audio"})
+            except Exception:
+                pass
         video_name = data['video_name']
         print(f'The generated video is named {video_name} in {save_dir}')
 
@@ -150,6 +172,12 @@ class SadTalker():
             
         import gc; gc.collect()
         
+        if callable(progress_cb):
+            try:
+                progress_cb({"stage": "done", "progress": 100, "message": "Generation complete", "output_path": return_path})
+            except Exception:
+                pass
+
         return return_path
 
     

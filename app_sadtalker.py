@@ -1,4 +1,8 @@
 import os, sys
+import threading
+import queue
+import json
+from typing import Dict, Any
 import gradio as gr
 from src.gradio_demo import SadTalker  
 
@@ -32,17 +36,17 @@ def sadtalker_demo(checkpoint_path='checkpoints', config_path='src/config', warp
                     <a style='font-size:18px;color: #efefef' href='https://sadtalker.github.io'>Homepage</a>  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \
                      <a style='font-size:18px;color: #efefef' href='https://github.com/Winfredy/SadTalker'> Github </div>")
         
-        with gr.Row().style(equal_height=False):
+        with gr.Row():
             with gr.Column(variant='panel'):
                 with gr.Tabs(elem_id="sadtalker_source_image"):
                     with gr.TabItem('Upload image'):
                         with gr.Row():
-                            source_image = gr.Image(label="Source image", source="upload", type="filepath", elem_id="img2img_image").style(width=512)
+                            source_image = gr.Image(label="Source image", sources="upload", type="filepath", elem_id="img2img_image", width=512)
 
                 with gr.Tabs(elem_id="sadtalker_driven_audio"):
                     with gr.TabItem('Upload OR TTS'):
                         with gr.Column(variant='panel'):
-                            driven_audio = gr.Audio(label="Input audio", source="upload", type="filepath")
+                            driven_audio = gr.Audio(label="Input audio", sources="upload", type="filepath")
 
                         if sys.platform != 'win32' and not in_webui: 
                             from src.utils.text2speech import TTSTalker
@@ -68,7 +72,7 @@ def sadtalker_demo(checkpoint_path='checkpoints', config_path='src/config', warp
                             submit = gr.Button('Generate', elem_id="sadtalker_generate", variant='primary')
                             
                 with gr.Tabs(elem_id="sadtalker_genearted"):
-                        gen_video = gr.Video(label="Generated video", format="mp4").style(width=256)
+                        gen_video = gr.Video(label="Generated video", format="mp4", width=256)
 
         if warpfn:
             submit.click(
@@ -117,6 +121,80 @@ if __name__ == "__main__":
 
         app = demo.app
 
+        # In-memory job store (simple, replace with Redis for production)
+        JOBS: Dict[str, Dict[str, Any]] = {}
+        PROGRESS_CHANNELS: Dict[str, "queue.Queue"] = {}
+
+        def _emit(job_id: str, payload: Dict[str, Any]):
+            payload = dict(payload or {})
+            payload["job_id"] = job_id
+            JOBS[job_id]["progress"] = payload.get("progress", JOBS[job_id].get("progress", 0))
+            JOBS[job_id]["last_event"] = payload
+            q = PROGRESS_CHANNELS.get(job_id)
+            if q:
+                try:
+                    q.put_nowait(json.dumps(payload))
+                except Exception:
+                    pass
+
+        def _run_job(job_id: str, src_path: str, aud_path: str, options: Dict[str, Any]):
+            try:
+                JOBS[job_id]["status"] = "running"
+
+                def progress_cb(evt: Dict[str, Any]):
+                    _emit(job_id, evt)
+
+                sad_talker = SadTalker("checkpoints", "src/config", lazy_load=True)
+                output_path = sad_talker.test(
+                    source_image=src_path,
+                    driven_audio=aud_path,
+                    preprocess=options.get("preprocess", "crop"),
+                    is_still_mode=options.get("still_mode", False) if "is_still_mode" in SadTalker.test.__code__.co_varnames else False,
+                    still_mode=options.get("still_mode", False),
+                    use_enhancer=options.get("use_enhancer", False),
+                    batch_size=options.get("batch_size", 1),
+                    size=options.get("size", 256),
+                    pose_style=options.get("pose_style", 0),
+                    result_dir=options.get("result_dir"),
+                    progress_cb=progress_cb,
+                )
+
+                if isinstance(output_path, bytes):
+                    fixed_path = os.path.join(options.get("result_dir"), "result.mp4")
+                    with open(fixed_path, "wb") as f:
+                        f.write(output_path)
+                    output_path = fixed_path
+
+                output_path = str(output_path)
+                JOBS[job_id]["result_path"] = output_path
+
+                # Optional S3 upload
+                s3_url = None
+                bucket = os.getenv("S3_BUCKET")
+                if bucket:
+                    try:
+                        import boto3
+                        from botocore.exceptions import BotoCoreError, ClientError
+                        s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION"))
+                        key = f"sadtalker/{job_id}.mp4"
+                        s3.upload_file(output_path, bucket, key, ExtraArgs={"ContentType": "video/mp4"})
+                        region = os.getenv("AWS_REGION") or s3.meta.region_name or "us-east-1"
+                        if region == "us-east-1":
+                            s3_url = f"https://{bucket}.s3.amazonaws.com/{key}"
+                        else:
+                            s3_url = f"https://{bucket}.s3-{region}.amazonaws.com/{key}"
+                        JOBS[job_id]["s3_url"] = s3_url
+                        _emit(job_id, {"stage": "upload", "progress": 95, "message": "Uploaded to S3", "s3_url": s3_url})
+                    except Exception as _e:
+                        JOBS[job_id]["s3_error"] = str(_e)
+
+                JOBS[job_id]["status"] = "completed"
+                _emit(job_id, {"stage": "done", "progress": 100, "message": "Job completed", "output_path": output_path, "s3_url": s3_url})
+            except Exception as e:
+                JOBS[job_id]["status"] = "error"
+                JOBS[job_id]["error"] = str(e)
+                _emit(job_id, {"stage": "error", "message": str(e)})
+
         @app.exception_handler(RequestValidationError)
         async def gradio_validation_exception_handler(request: Request, exc: RequestValidationError):
             # Avoid UTF-8 decode of potential binary by stringifying the error only
@@ -139,8 +217,8 @@ if __name__ == "__main__":
                 "message": str(exc)
             })
 
-        @app.post("/api/generate")
-        async def api_generate(
+        @app.post("/api/jobs")
+        async def create_job(
             source_image: UploadFile = File(...),
             driven_audio: UploadFile = File(...),
             preprocess: str = Form("crop"),
@@ -165,40 +243,71 @@ if __name__ == "__main__":
                 with open(aud_path, "wb") as f:
                     f.write(await driven_audio.read())
 
-                # Run SadTalker
-                sad_talker = SadTalker("checkpoints", "src/config", lazy_load=True)
-                output_path = sad_talker.test(
-                    source_image=src_path,
-                    driven_audio=aud_path,
-                    preprocess=preprocess,
-                    is_still_mode=still_mode if "is_still_mode" in SadTalker.test.__code__.co_varnames else False,
-                    still_mode=still_mode,
-                    use_enhancer=use_enhancer,
-                    batch_size=batch_size,
-                    size=size,
-                    pose_style=pose_style,
-                    result_dir=base_dir,  # keep result in same folder
-                )
+                JOBS[tag] = {"status": "queued", "progress": 0, "base_dir": base_dir}
+                PROGRESS_CHANNELS[tag] = queue.Queue(maxsize=100)
 
-                # Ensure output_path is a string (filepath)
-                if isinstance(output_path, bytes):
-                    fixed_path = os.path.join(base_dir, "result.mp4")
-                    with open(fixed_path, "wb") as f:
-                        f.write(output_path)
-                    output_path = fixed_path
+                options = {
+                    "preprocess": preprocess,
+                    "still_mode": still_mode,
+                    "use_enhancer": use_enhancer,
+                    "batch_size": batch_size,
+                    "size": size,
+                    "pose_style": pose_style,
+                    "result_dir": base_dir,
+                }
 
-                output_path = str(output_path)
+                t = threading.Thread(target=_run_job, args=(tag, src_path, aud_path, options), daemon=True)
+                t.start()
 
-                return JSONResponse({
-                    "status": "ok",
-                    "video_path": output_path,   # path on server
-                    "result_id": tag
-                })
+                return JSONResponse({"status": "ok", "job_id": tag})
             except Exception as e:
-                return JSONResponse({
-                    "status": "error",
-                    "message": str(e)
-                }, status_code=500)
+                return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+        @app.get("/api/jobs/{job_id}")
+        async def get_job(job_id: str):
+            job = JOBS.get(job_id)
+            if not job:
+                return JSONResponse({"status": "error", "message": "Not found"}, status_code=404)
+            resp = {
+                "status": job.get("status"),
+                "progress": job.get("progress", 0),
+                "result_path": job.get("result_path"),
+                "s3_url": job.get("s3_url"),
+                "error": job.get("error"),
+                "last_event": job.get("last_event"),
+            }
+            return JSONResponse(resp)
+
+        # WebSocket for progress streaming
+        try:
+            from fastapi import WebSocket
+
+            @app.websocket("/ws/jobs/{job_id}")
+            async def ws_job(websocket: WebSocket, job_id: str):
+                await websocket.accept()
+                if job_id not in PROGRESS_CHANNELS:
+                    await websocket.send_text(json.dumps({"error": "unknown job"}))
+                    await websocket.close()
+                    return
+                q = PROGRESS_CHANNELS[job_id]
+                # Send initial state
+                job = JOBS.get(job_id)
+                if job and job.get("last_event"):
+                    await websocket.send_text(json.dumps(job["last_event"]))
+                try:
+                    while True:
+                        msg = q.get()
+                        await websocket.send_text(msg)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        await websocket.close()
+                    except Exception:
+                        pass
+        except Exception:
+            # WebSocket unavailable in some environments
+            pass
     except Exception as _:
         # If FastAPI is unavailable for any reason, continue with UI only
         pass

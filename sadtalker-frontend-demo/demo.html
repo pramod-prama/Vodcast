@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SadTalker API Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+            border-bottom-color: #4c63d2;
+        }
+
+        .tab-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-upload {
+            border: 2px dashed #e1e5e9;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .status-card.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .status-card.processing {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        .status-card.failed {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e1e5e9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .response-display {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .job-item {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .job-info {
+            flex: 1;
+        }
+
+        .job-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .job-status {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .job-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .job-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .job-actions {
+                margin-top: 10px;
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 SadTalker API Demo</h1>
+            <p>Test all API endpoints for talking face video generation</p>
+        </div>
+
+        <!-- Health Status -->
+        <div id="healthStatus" class="status-card" style="display: none;">
+            <strong>API Status:</strong> <span id="healthText">Checking...</span>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('create')">🚀 Create Job</button>
+            <button class="tab" onclick="showTab('jobs')">📋 All Jobs</button>
+            <button class="tab" onclick="showTab('status')">📊 Job Status</button>
+            <button class="tab" onclick="showTab('health')">❤️ Health Check</button>
+        </div>
+
+        <!-- Create Job Tab -->
+        <div id="createTab" class="tab-content active">
+            <h2>Create New Job</h2>
+            <form id="createJobForm">
+                <div class="grid">
+                    <div class="card">
+                        <h3>📁 File Upload</h3>
+                        
+                        <div class="form-group">
+                            <label>Source Image *</label>
+                            <div class="file-upload" onclick="document.getElementById('imageFile').click()">
+                                <input type="file" id="imageFile" accept="image/*" onchange="handleFileSelect('imageFile', 'imageText')">
+                                <div id="imageText">Click to select image</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Audio File *</label>
+                            <div class="file-upload" onclick="document.getElementById('audioFile').click()">
+                                <input type="file" id="audioFile" accept="audio/*" onchange="handleFileSelect('audioFile', 'audioText')">
+                                <div id="audioText">Click to select audio</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚙️ Parameters</h3>
+                        
+                        <div class="form-group">
+                            <label>Preprocess</label>
+                            <select id="preprocess">
+                                <option value="crop">Crop</option>
+                                <option value="resize">Resize</option>
+                                <option value="full">Full</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Still Mode</label>
+                            <select id="stillMode">
+                                <option value="false">False</option>
+                                <option value="true">True</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Use Enhancer</label>
+                            <select id="useEnhancer">
+                                <option value="false">False</option>
+                                <option value="true">True</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Batch Size</label>
+                            <select id="batchSize">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Size</label>
+                            <select id="size">
+                                <option value="256">256</option>
+                                <option value="512">512</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Pose Style (0-45)</label>
+                            <input type="number" id="poseStyle" min="0" max="45" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="createBtn">
+                    🚀 Create Job
+                </button>
+            </form>
+
+            <div id="selectedJob" class="status-card" style="display: none;">
+                <h3>Selected Job</h3>
+                <div id="selectedJobContent" class="response-display"></div>
+            </div>
+        </div>
+
+        <!-- All Jobs Tab -->
+        <div id="jobsTab" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>All Jobs (<span id="jobCount">0</span>)</h2>
+                <button class="btn btn-secondary" onclick="loadJobs()">🔄 Refresh</button>
+            </div>
+
+            <div id="jobsList" class="job-list">
+                <div class="status-card">
+                    <p>No jobs found. Create a job to get started!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Status Tab -->
+        <div id="statusTab" class="tab-content">
+            <h2>Check Job Status</h2>
+            <div class="form-group">
+                <label>Job ID</label>
+                <input type="text" id="jobIdInput" placeholder="Enter job ID to check status">
+            </div>
+            <button class="btn" onclick="checkJobStatus()">📊 Get Status</button>
+
+            <div id="jobStatusResult" class="status-card" style="display: none;">
+                <h3>Job Status</h3>
+                <div id="jobStatusContent" class="response-display"></div>
+            </div>
+        </div>
+
+        <!-- Health Check Tab -->
+        <div id="healthTab" class="tab-content">
+            <h2>API Health Check</h2>
+            <button class="btn" onclick="checkHealth()">❤️ Check Health</button>
+
+            <div id="healthResult" class="status-card" style="display: none;">
+                <h3>Health Status</h3>
+                <div id="healthContent" class="response-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:7860';
+        let jobs = [];
+        let pollingJobs = new Set();
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'jobs') {
+                loadJobs();
+            } else if (tabName === 'health') {
+                checkHealth();
+            }
+        }
+
+        // File selection handler
+        function handleFileSelect(inputId, textId) {
+            const file = document.getElementById(inputId).files[0];
+            const textElement = document.getElementById(textId);
+            
+            if (file) {
+                textElement.textContent = file.name;
+                textElement.style.color = '#667eea';
+                textElement.style.fontWeight = '600';
+            } else {
+                textElement.textContent = 'Click to select file';
+                textElement.style.color = '#666';
+                textElement.style.fontWeight = 'normal';
+            }
+        }
+
+        // Check API health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const data = await response.json();
+                
+                const healthStatus = document.getElementById('healthStatus');
+                const healthText = document.getElementById('healthText');
+                
+                if (data.status === 'healthy') {
+                    healthStatus.className = 'status-card completed';
+                    healthText.textContent = `${data.status} - ${data.message} | Active Jobs: ${data.active_jobs || 0}`;
+                } else {
+                    healthStatus.className = 'status-card failed';
+                    healthText.textContent = `${data.status} - ${data.message}`;
+                }
+                
+                healthStatus.style.display = 'block';
+                
+                // Update health tab content
+                document.getElementById('healthContent').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('healthResult').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Health check failed:', error);
+                const healthStatus = document.getElementById('healthStatus');
+                const healthText = document.getElementById('healthText');
+                healthStatus.className = 'status-card failed';
+                healthText.textContent = 'Error - API not reachable';
+                healthStatus.style.display = 'block';
+            }
+        }
+
+        // Create job
+        async function createJob(event) {
+            event.preventDefault();
+            
+            const imageFile = document.getElementById('imageFile').files[0];
+            const audioFile = document.getElementById('audioFile').files[0];
+            
+            if (!imageFile || !audioFile) {
+                alert('Please select both image and audio files');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('source_image', imageFile);
+            formData.append('driven_audio', audioFile);
+            formData.append('preprocess', document.getElementById('preprocess').value);
+            formData.append('still_mode', document.getElementById('stillMode').value);
+            formData.append('use_enhancer', document.getElementById('useEnhancer').value);
+            formData.append('batch_size', document.getElementById('batchSize').value);
+            formData.append('size', document.getElementById('size').value);
+            formData.append('pose_style', document.getElementById('poseStyle').value);
+
+            const createBtn = document.getElementById('createBtn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<span class="loading"></span> Creating...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/jobs`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Job created successfully!');
+                    document.getElementById('selectedJobContent').textContent = JSON.stringify(data, null, 2);
+                    document.getElementById('selectedJob').style.display = 'block';
+                    startPolling(data.job_id);
+                    loadJobs();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create job'));
+                }
+            } catch (error) {
+                console.error('Error creating job:', error);
+                alert('Failed to create job');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = '🚀 Create Job';
+            }
+        }
+
+        // Start polling for job status
+        function startPolling(jobId) {
+            pollingJobs.add(jobId);
+            
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        pollingJobs.delete(jobId);
+                        loadJobs();
+                        
+                        if (data.status === 'completed') {
+                            alert('Job completed successfully!');
+                        } else {
+                            alert('Job failed: ' + (data.error || 'Unknown error'));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error polling job status:', error);
+                }
+            }, 2000);
+        }
+
+        // Load all jobs
+        async function loadJobs() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/jobs`);
+                const data = await response.json();
+                jobs = data.jobs || [];
+                
+                document.getElementById('jobCount').textContent = jobs.length;
+                
+                const jobsList = document.getElementById('jobsList');
+                
+                if (jobs.length === 0) {
+                    jobsList.innerHTML = '<div class="status-card"><p>No jobs found. Create a job to get started!</p></div>';
+                } else {
+                    jobsList.innerHTML = jobs.map(job => `
+                        <div class="job-item">
+                            <div class="job-info">
+                                <div class="job-id">ID: ${job.job_id}</div>
+                                <div class="job-status">
+                                    Status: ${job.status} 
+                                    ${pollingJobs.has(job.job_id) ? '<span class="loading" style="margin-left: 10px;"></span>' : ''}
+                                </div>
+                                <div style="font-size: 14px; color: #666;">
+                                    Progress: ${job.progress}% | 
+                                    Size: ${job.size} | 
+                                    Created: ${new Date(job.created_at * 1000).toLocaleString()}
+                                </div>
+                                ${job.image_filename ? `
+                                    <div style="font-size: 14px; color: #666;">
+                                        Files: ${job.image_filename} + ${job.audio_filename}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="job-actions">
+                                <button class="btn btn-secondary" onclick="getJobStatus('${job.job_id}')">
+                                    📊 Status
+                                </button>
+                                ${job.status === 'completed' && job.s3_url ? `
+                                    <a href="${job.s3_url}" target="_blank" class="btn btn-success">
+                                        📥 Download
+                                    </a>
+                                ` : ''}
+                                <button class="btn btn-danger" onclick="deleteJob('${job.job_id}')">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load jobs:', error);
+                alert('Failed to load jobs');
+            }
+        }
+
+        // Get job status
+        async function getJobStatus(jobId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`);
+                const data = await response.json();
+                
+                document.getElementById('jobStatusContent').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('jobStatusResult').style.display = 'block';
+                
+                // Show in status tab
+                document.getElementById('jobIdInput').value = jobId;
+                showTab('status');
+            } catch (error) {
+                console.error('Error getting job status:', error);
+                alert('Failed to get job status');
+            }
+        }
+
+        // Check job status from input
+        async function checkJobStatus() {
+            const jobId = document.getElementById('jobIdInput').value.trim();
+            if (!jobId) {
+                alert('Please enter a job ID');
+                return;
+            }
+            
+            await getJobStatus(jobId);
+        }
+
+        // Delete job
+        async function deleteJob(jobId) {
+            if (!confirm('Are you sure you want to delete this job?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('Job deleted successfully');
+                    loadJobs();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.error || 'Failed to delete job'));
+                }
+            } catch (error) {
+                console.error('Error deleting job:', error);
+                alert('Failed to delete job');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('createJobForm').addEventListener('submit', createJob);
+            checkHealth();
+        });
+    </script>
+</body>
+</html>

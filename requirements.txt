@@ -19,3 +19,5 @@ gradio
 gfpgan
 av
 safetensors
+boto3
+uvicorn

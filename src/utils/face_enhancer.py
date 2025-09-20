@@ -1,7 +1,13 @@
 import os
 import torch 
 
-from gfpgan import GFPGANer
+try:
+    from gfpgan import GFPGANer
+    GFPGAN_AVAILABLE = True
+except ImportError:
+    print("Warning: GFPGAN not available. Face enhancement will be disabled.")
+    GFPGAN_AVAILABLE = False
+    GFPGANer = None
 
 from tqdm import tqdm
 
@@ -48,6 +54,13 @@ def enhancer_generator_no_len(images, method='gfpgan', bg_upsampler='realesrgan'
     if not isinstance(images, list) and os.path.isfile(images): # handle video to images
         images = load_video_to_cv2(images)
 
+    # If GFPGAN is not available, just return the original images
+    if not GFPGAN_AVAILABLE:
+        print("GFPGAN not available, returning original images without enhancement")
+        for img in images:
+            yield img
+        return
+
     # ------------------------ set up GFPGAN restorer ------------------------
     if  method == 'gfpgan':
         arch = 'clean'
@@ -76,17 +89,21 @@ def enhancer_generator_no_len(images, method='gfpgan', bg_upsampler='realesrgan'
                           'If you really want to use it, please modify the corresponding codes.')
             bg_upsampler = None
         else:
-            from basicsr.archs.rrdbnet_arch import RRDBNet
-            from realesrgan import RealESRGANer
-            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
-            bg_upsampler = RealESRGANer(
-                scale=2,
-                model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
-                model=model,
-                tile=400,
-                tile_pad=10,
-                pre_pad=0,
-                half=True)  # need to set False in CPU mode
+            try:
+                from basicsr.archs.rrdbnet_arch import RRDBNet
+                from realesrgan import RealESRGANer
+                model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
+                bg_upsampler = RealESRGANer(
+                    scale=2,
+                    model_path='https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
+                    model=model,
+                    tile=400,
+                    tile_pad=10,
+                    pre_pad=0,
+                    half=True)  # need to set False in CPU mode
+            except ImportError:
+                print("RealESRGAN not available, skipping background upsampler")
+                bg_upsampler = None
     else:
         bg_upsampler = None
 
@@ -100,24 +117,30 @@ def enhancer_generator_no_len(images, method='gfpgan', bg_upsampler='realesrgan'
         # download pre-trained models from url
         model_path = url
 
-    restorer = GFPGANer(
-        model_path=model_path,
-        upscale=2,
-        arch=arch,
-        channel_multiplier=channel_multiplier,
-        bg_upsampler=bg_upsampler)
+    try:
+        restorer = GFPGANer(
+            model_path=model_path,
+            upscale=2,
+            arch=arch,
+            channel_multiplier=channel_multiplier,
+            bg_upsampler=bg_upsampler)
 
-    # ------------------------ restore ------------------------
-    for idx in tqdm(range(len(images)), 'Face Enhancer:'):
-        
-        img = cv2.cvtColor(images[idx], cv2.COLOR_RGB2BGR)
-        
-        # restore faces and background if necessary
-        cropped_faces, restored_faces, r_img = restorer.enhance(
-            img,
-            has_aligned=False,
-            only_center_face=False,
-            paste_back=True)
-        
-        r_img = cv2.cvtColor(r_img, cv2.COLOR_BGR2RGB)
-        yield r_img
+        # ------------------------ restore ------------------------
+        for idx in tqdm(range(len(images)), 'Face Enhancer:'):
+            
+            img = cv2.cvtColor(images[idx], cv2.COLOR_RGB2BGR)
+            
+            # restore faces and background if necessary
+            cropped_faces, restored_faces, r_img = restorer.enhance(
+                img,
+                has_aligned=False,
+                only_center_face=False,
+                paste_back=True)
+            
+            r_img = cv2.cvtColor(r_img, cv2.COLOR_BGR2RGB)
+            yield r_img
+    except Exception as e:
+        print(f"Error in face enhancement: {e}")
+        print("Returning original images without enhancement")
+        for img in images:
+            yield img
