@@ -15,6 +15,8 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import tempfile
 import shutil
+from google.cloud import storage
+
 
 app = Flask(__name__)
 CORS(app)
@@ -30,6 +32,23 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
 # Store jobs in memory
 jobs = {}
+
+# GCS Setup
+GCS_BUCKET_NAME = "gcs-vodacast-bucket"  # replace with your bucket name
+# GCS_CREDENTIALS_FILE = "gcs_credentials.json"  # path to your service account JSON
+GCS_CREDENTIALS_FILE = os.path.join(os.getcwd(), "gcs_credentials.json")
+
+def upload_to_gcs(local_file, bucket_name, destination_blob):
+    client = storage.Client.from_service_account_json(GCS_CREDENTIALS_FILE)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob)
+    blob.upload_from_filename(local_file)
+    
+    # Make the file public
+    blob.make_public()
+    
+    return blob.public_url
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -104,10 +123,26 @@ def run_sadtalker_inference(job_id, image_path, audio_path, preprocess='crop', s
             
             if output_files:
                 output_path = str(output_files[0])
+
+                print(f"Uploading to GCS: {output_path}")
+
+                # Upload to GCS
+                # gcs_filename = f"{job_id}/output.mp4"
+                public_url = upload_to_gcs(
+                    local_file=output_path,
+                    bucket_name=GCS_BUCKET_NAME,
+                    destination_blob=f"{job_id}/output.mp4"
+                )
+
+
+                print(f"Uploaded to GCS: {public_url}")
+                print("reached")
+
                 jobs[job_id]['status'] = 'completed'
                 jobs[job_id]['progress'] = 100
                 jobs[job_id]['result_path'] = output_path
-                jobs[job_id]['s3_url'] = f'http://localhost:7860/api/results/{job_id}/output.mp4'
+                # jobs[job_id]['s3_url'] = f'http://localhost:7860/api/results/{job_id}/output.mp4'
+                jobs[job_id]['s3_url']= public_url
             else:
                 jobs[job_id]['status'] = 'failed'
                 jobs[job_id]['error'] = 'No output video generated'

@@ -4,4 +4,6 @@ docs/_build/
 # Ignore model weights
 *.pth
 gfpgan/weight/
-uploads/
+.uploads/
+results/
+.results/
