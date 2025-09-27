@@ -195,8 +195,8 @@ function App() {
   return (
     <div className="container">
       <div className="header">
-        <h1>🎭 SadTalker API Demo</h1>
-        <p>Test all API endpoints for talking face video generation</p>
+        <h1>🎭 Prama Vodcast</h1>
+        {/* <p>Test all API endpoints for talking face video generation</p> */}
       </div>
 
       {/* Health Status */}

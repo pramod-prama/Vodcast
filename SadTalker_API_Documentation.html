@@ -1,0 +1,863 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>SadTalker API Documentation</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    color: #333;
+                }
+                h1, h2, h3, h4, h5, h6 {
+                    color: #2c3e50;
+                    margin-top: 30px;
+                    margin-bottom: 15px;
+                }
+                h1 {
+                    border-bottom: 3px solid #3498db;
+                    padding-bottom: 10px;
+                }
+                h2 {
+                    border-bottom: 2px solid #ecf0f1;
+                    padding-bottom: 8px;
+                }
+                code {
+                    background-color: #f8f9fa;
+                    padding: 2px 4px;
+                    border-radius: 3px;
+                    font-family: 'Courier New', monospace;
+                }
+                pre {
+                    background-color: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 5px;
+                    overflow-x: auto;
+                    border-left: 4px solid #3498db;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 20px 0;
+                }
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 12px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f2f2f2;
+                    font-weight: bold;
+                }
+                blockquote {
+                    border-left: 4px solid #3498db;
+                    margin: 20px 0;
+                    padding: 10px 20px;
+                    background-color: #f8f9fa;
+                }
+                .emoji {
+                    font-size: 1.2em;
+                }
+                @media print {
+                    body {
+                        font-size: 12px;
+                        line-height: 1.4;
+                    }
+                    h1 { font-size: 18px; }
+                    h2 { font-size: 16px; }
+                    h3 { font-size: 14px; }
+                    pre, code { font-size: 10px; }
+                    table { font-size: 10px; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>🎭 SadTalker API - Comprehensive Documentation</h1>
+<h2>📋 Table of Contents</h2>
+<ol>
+<li><a href="#system-overview">System Overview</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#api-endpoints">API Endpoints</a></li>
+<li><a href="#frontend-integration">Frontend Integration</a></li>
+<li><a href="#data-flow">Data Flow</a></li>
+<li><a href="#google-cloud-storage-integration">Google Cloud Storage Integration</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#deployment-guide">Deployment Guide</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<hr />
+<h2>🚀 System Overview</h2>
+<p>The SadTalker API is a comprehensive system for generating talking face videos from static images and audio files. It combines:</p>
+<ul>
+<li><strong>Backend API Server</strong> (<code>real_api_server.py</code>) - Flask-based REST API</li>
+<li><strong>React Frontend</strong> (<code>sadtalker-frontend-demo/</code>) - Modern web interface</li>
+<li><strong>Google Cloud Storage</strong> - Cloud-based file storage and delivery</li>
+<li><strong>SadTalker AI Model</strong> - Core video generation engine</li>
+</ul>
+<h3>Key Features</h3>
+<ul>
+<li>✅ Asynchronous job processing</li>
+<li>✅ Real-time progress tracking</li>
+<li>✅ Cloud storage integration</li>
+<li>✅ Modern React frontend</li>
+<li>✅ File upload and management</li>
+<li>✅ Job status monitoring</li>
+<li>✅ Video streaming and download</li>
+</ul>
+<hr />
+<h2>🏗️ Architecture</h2>
+<div class="codehilite"><pre><span></span><code><span class="n">graph</span><span class="w"> </span><span class="n">TB</span>
+<span class="w">    </span><span class="n">A</span><span class="p">[</span><span class="n">React</span><span class="w"> </span><span class="n">Frontend</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="n">Flask</span><span class="w"> </span><span class="n">API</span><span class="w"> </span><span class="n">Server</span><span class="p">]</span>
+<span class="w">    </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">C</span><span class="p">[</span><span class="n">Job</span><span class="w"> </span><span class="n">Queue</span><span class="p">]</span>
+<span class="w">    </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span><span class="p">[</span><span class="n">SadTalker</span><span class="w"> </span><span class="n">Inference</span><span class="p">]</span>
+<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">E</span><span class="p">[</span><span class="n">Local</span><span class="w"> </span><span class="n">Results</span><span class="p">]</span>
+<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">F</span><span class="p">[</span><span class="n">Google</span><span class="w"> </span><span class="n">Cloud</span><span class="w"> </span><span class="n">Storage</span><span class="p">]</span>
+<span class="w">    </span><span class="n">F</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">G</span><span class="p">[</span><span class="n">Public</span><span class="w"> </span><span class="n">Video</span><span class="w"> </span><span class="n">URLs</span><span class="p">]</span>
+<span class="w">    </span><span class="n">G</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">A</span>
+
+<span class="w">    </span><span class="n">H</span><span class="p">[</span><span class="n">File</span><span class="w"> </span><span class="n">Upload</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">I</span><span class="p">[</span><span class="n">Local</span><span class="w"> </span><span class="n">Storage</span><span class="p">]</span>
+<span class="w">    </span><span class="n">I</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span>
+
+<span class="w">    </span><span class="n">J</span><span class="p">[</span><span class="n">Job</span><span class="w"> </span><span class="n">Status</span><span class="w"> </span><span class="n">API</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">K</span><span class="p">[</span><span class="n">Real</span><span class="o">-</span><span class="n">time</span><span class="w"> </span><span class="n">Updates</span><span class="p">]</span>
+<span class="w">    </span><span class="n">K</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">A</span>
+</code></pre></div>
+
+<h3>Component Details</h3>
+<h4>1. <strong>Flask API Server</strong> (<code>real_api_server.py</code>)</h4>
+<ul>
+<li><strong>Port</strong>: 7860</li>
+<li><strong>Framework</strong>: Flask with CORS support</li>
+<li><strong>Storage</strong>: In-memory job tracking</li>
+<li><strong>Processing</strong>: Background threading for inference</li>
+</ul>
+<h4>2. <strong>React Frontend</strong> (<code>sadtalker-frontend-demo/</code>)</h4>
+<ul>
+<li><strong>Framework</strong>: React 18</li>
+<li><strong>Styling</strong>: Custom CSS with modern design</li>
+<li><strong>State Management</strong>: React hooks</li>
+<li><strong>API Integration</strong>: Fetch API with polling</li>
+</ul>
+<h4>3. <strong>Google Cloud Storage</strong></h4>
+<ul>
+<li><strong>Bucket</strong>: <code>gcs-vodacast-bucket</code></li>
+<li><strong>Authentication</strong>: Service account JSON</li>
+<li><strong>Features</strong>: Public file access, automatic upload</li>
+</ul>
+<hr />
+<h2>🔌 API Endpoints</h2>
+<h3>Base URL</h3>
+<div class="codehilite"><pre><span></span><code>http://localhost:7860
+</code></pre></div>
+
+<h3>1. Health Check</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">GET /api/health</span>
+</code></pre></div>
+
+<p><strong>Purpose</strong>: Verify API server status and get system information</p>
+<p><strong>Response</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SadTalker API is running&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1757876421.1140838</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;active_jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Frontend Integration</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">checkHealth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">API_BASE_URL</span><span class="si">}</span><span class="sb">/api/health`</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">setHealthStatus</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">setHealthStatus</span><span class="p">({</span><span class="w"> </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;API not reachable&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<hr />
+<h3>2. Create Job</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">POST /api/jobs</span>
+<span class="err">Content-Type: multipart/form-data</span>
+</code></pre></div>
+
+<p><strong>Purpose</strong>: Create a new talking face video generation job</p>
+<p><strong>Required Parameters</strong>:
+| Field | Type | Description |
+|-------|------|-------------|
+| <code>source_image</code> | File | Image file (PNG, JPG, JPEG) |
+| <code>driven_audio</code> | File | Audio file (WAV, MP3, MP4) |</p>
+<p><strong>Optional Parameters</strong>:
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| <code>preprocess</code> | String | "crop" | Image preprocessing method |
+| <code>still_mode</code> | String | "false" | Use still mode for generation |
+| <code>use_enhancer</code> | String | "false" | Enable face enhancement |
+| <code>batch_size</code> | String | "1" | Processing batch size |
+| <code>size</code> | String | "256" | Output video size (256/512) |
+| <code>pose_style</code> | String | "0" | Pose style (0-45) |</p>
+<p><strong>Response</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;job_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a8435aad-1a00-4eb0-b751-282b30d2b21e&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;created&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Job created successfully&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Frontend Integration</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">createJob</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">e</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">jobFormData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">FormData</span><span class="p">();</span>
+<span class="w">  </span><span class="nx">jobFormData</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s1">&#39;source_image&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">formData</span><span class="p">.</span><span class="nx">source_image</span><span class="p">);</span>
+<span class="w">  </span><span class="nx">jobFormData</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s1">&#39;driven_audio&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">formData</span><span class="p">.</span><span class="nx">driven_audio</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Add parameters</span>
+<span class="w">  </span><span class="nb">Object</span><span class="p">.</span><span class="nx">keys</span><span class="p">(</span><span class="nx">formData</span><span class="p">).</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s1">&#39;source_image&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">key</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s1">&#39;driven_audio&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">jobFormData</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">formData</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">});</span>
+
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">API_BASE_URL</span><span class="si">}</span><span class="sb">/api/jobs`</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="nx">jobFormData</span>
+<span class="w">    </span><span class="p">});</span>
+
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">toast</span><span class="p">.</span><span class="nx">success</span><span class="p">(</span><span class="s1">&#39;Job created successfully!&#39;</span><span class="p">);</span>
+<span class="w">      </span><span class="nx">setSelectedJob</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+<span class="w">      </span><span class="nx">startPolling</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">job_id</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">toast</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Failed to create job&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<hr />
+<h3>3. Get Job Status</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">GET /api/jobs/{job_id}</span>
+</code></pre></div>
+
+<p><strong>Purpose</strong>: Retrieve current status and progress of a specific job</p>
+<p><strong>Response</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;job_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a8435aad-1a00-4eb0-b751-282b30d2b21e&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;progress&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1757876421.1140838</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;preprocess&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crop&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;still_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;false&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;use_enhancer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;false&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;batch_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;256&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pose_style&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;image_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uploads/...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;audio_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uploads/...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;result_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;results/.../output.mp4&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;s3_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://storage.googleapis.com/...&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Job Status Flow</strong>:</p>
+<div class="codehilite"><pre><span></span><code>created → processing → completed
+    ↓         ↓           ↓
+  0%        10-90%      100%
+</code></pre></div>
+
+<p><strong>Frontend Integration</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">startPolling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">jobId</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">setPollingJobs</span><span class="p">(</span><span class="nx">prev</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Set</span><span class="p">([...</span><span class="nx">prev</span><span class="p">,</span><span class="w"> </span><span class="nx">jobId</span><span class="p">]));</span>
+
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">pollInterval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setInterval</span><span class="p">(</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">API_BASE_URL</span><span class="si">}</span><span class="sb">/api/jobs/</span><span class="si">${</span><span class="nx">jobId</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;completed&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;failed&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">clearInterval</span><span class="p">(</span><span class="nx">pollInterval</span><span class="p">);</span>
+<span class="w">        </span><span class="nx">setPollingJobs</span><span class="p">(</span><span class="nx">prev</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="kd">const</span><span class="w"> </span><span class="nx">newSet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Set</span><span class="p">(</span><span class="nx">prev</span><span class="p">);</span>
+<span class="w">          </span><span class="nx">newSet</span><span class="p">.</span><span class="ow">delete</span><span class="p">(</span><span class="nx">jobId</span><span class="p">);</span>
+<span class="w">          </span><span class="k">return</span><span class="w"> </span><span class="nx">newSet</span><span class="p">;</span>
+<span class="w">        </span><span class="p">});</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;completed&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nx">toast</span><span class="p">.</span><span class="nx">success</span><span class="p">(</span><span class="s1">&#39;Job completed successfully!&#39;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nx">toast</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Job failed: &#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">error</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">));</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Error polling job status:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">error</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="mf">2000</span><span class="p">);</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<hr />
+<h3>4. List All Jobs</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">GET /api/jobs</span>
+</code></pre></div>
+
+<p><strong>Purpose</strong>: Retrieve all jobs in the system</p>
+<p><strong>Response</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;jobs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;job_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a8435aad-1a00-4eb0-b751-282b30d2b21e&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;progress&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1757876421.1140838</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;s3_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://storage.googleapis.com/...&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Frontend Integration</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">loadJobs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">API_BASE_URL</span><span class="si">}</span><span class="sb">/api/jobs`</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">setJobs</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">jobs</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[]);</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">toast</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Failed to load jobs&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<hr />
+<h3>5. Download Result Files</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">GET /api/results/{job_id}/{filename}</span>
+</code></pre></div>
+
+<p><strong>Purpose</strong>: Download generated video files</p>
+<p><strong>Frontend Integration</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Direct video display</span>
+<span class="p">{</span><span class="nx">videoUrl</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;video-container&quot;</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">h3</span><span class="o">&gt;</span><span class="nx">Generated</span><span class="w"> </span><span class="nx">Video</span><span class="o">&lt;</span><span class="err">/h3&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">video</span><span class="w"> </span><span class="nx">controls</span><span class="w"> </span><span class="nx">width</span><span class="o">=</span><span class="s2">&quot;100%&quot;</span><span class="w"> </span><span class="nx">maxWidth</span><span class="o">=</span><span class="s2">&quot;600&quot;</span><span class="o">&gt;</span>
+<span class="w">      </span><span class="o">&lt;</span><span class="nx">source</span><span class="w"> </span><span class="nx">src</span><span class="o">=</span><span class="p">{</span><span class="nx">videoUrl</span><span class="p">}</span><span class="w"> </span><span class="nx">type</span><span class="o">=</span><span class="s2">&quot;video/mp4&quot;</span><span class="w"> </span><span class="o">/&gt;</span>
+<span class="w">      </span><span class="nx">Your</span><span class="w"> </span><span class="nx">browser</span><span class="w"> </span><span class="nx">does</span><span class="w"> </span><span class="nx">not</span><span class="w"> </span><span class="nx">support</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">video</span><span class="w"> </span><span class="nx">tag</span><span class="p">.</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="err">/video&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">br</span><span class="w"> </span><span class="o">/&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">a</span><span class="w"> </span>
+<span class="w">      </span><span class="nx">href</span><span class="o">=</span><span class="p">{</span><span class="nx">videoUrl</span><span class="p">}</span><span class="w"> </span>
+<span class="w">      </span><span class="nx">download</span><span class="o">=</span><span class="s2">&quot;talking_face_video.mp4&quot;</span>
+<span class="w">      </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;btn btn-success&quot;</span>
+<span class="w">    </span><span class="o">&gt;</span>
+<span class="w">      </span><span class="err">📥</span><span class="w"> </span><span class="nx">Download</span><span class="w"> </span><span class="nx">Video</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="err">/a&gt;</span>
+<span class="w">  </span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+<span class="p">)}</span>
+</code></pre></div>
+
+<hr />
+<h2>🎨 Frontend Integration</h2>
+<h3>React Component Structure</h3>
+<p>The frontend is built with modern React patterns:</p>
+<h4>1. <strong>State Management</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">formData</span><span class="p">,</span><span class="w"> </span><span class="nx">setFormData</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">source_image</span><span class="o">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">driven_audio</span><span class="o">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">preprocess</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;crop&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">still_mode</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">use_enhancer</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">batch_size</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">size</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;256&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">pose_style</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;0&#39;</span>
+<span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">jobs</span><span class="p">,</span><span class="w"> </span><span class="nx">setJobs</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">([]);</span>
+<span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">selectedJob</span><span class="p">,</span><span class="w"> </span><span class="nx">setSelectedJob</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">pollingJobs</span><span class="p">,</span><span class="w"> </span><span class="nx">setPollingJobs</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nb">Set</span><span class="p">());</span>
+</code></pre></div>
+
+<h4>2. <strong>File Upload Handling</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">handleFileUpload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">field</span><span class="p">,</span><span class="w"> </span><span class="nx">file</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">setFormData</span><span class="p">(</span><span class="nx">prev</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span>
+<span class="w">    </span><span class="p">...</span><span class="nx">prev</span><span class="p">,</span>
+<span class="w">    </span><span class="p">[</span><span class="nx">field</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">file</span>
+<span class="w">  </span><span class="p">}));</span>
+<span class="p">};</span>
+
+<span class="c1">// In JSX</span>
+<span class="o">&lt;</span><span class="nx">input</span>
+<span class="w">  </span><span class="nx">type</span><span class="o">=</span><span class="s2">&quot;file&quot;</span>
+<span class="w">  </span><span class="nx">accept</span><span class="o">=</span><span class="s2">&quot;image/*&quot;</span>
+<span class="w">  </span><span class="nx">onChange</span><span class="o">=</span><span class="p">{(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">handleFileUpload</span><span class="p">(</span><span class="s1">&#39;source_image&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">files</span><span class="p">[</span><span class="mf">0</span><span class="p">])}</span>
+<span class="err">/&gt;</span>
+</code></pre></div>
+
+<h4>3. <strong>Real-time Status Updates</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Automatic polling for active jobs</span>
+<span class="nx">useEffect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">interval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setInterval</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">pollingJobs</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">jobId</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">getJobStatus</span><span class="p">(</span><span class="nx">jobId</span><span class="p">);</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="mf">2000</span><span class="p">);</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">clearInterval</span><span class="p">(</span><span class="nx">interval</span><span class="p">);</span>
+<span class="p">},</span><span class="w"> </span><span class="p">[</span><span class="nx">pollingJobs</span><span class="p">]);</span>
+</code></pre></div>
+
+<h4>4. <strong>Progress Visualization</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span><span class="nx">selectedJob</span><span class="p">.</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;processing&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;progress-container&quot;</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;progress-bar&quot;</span><span class="o">&gt;</span>
+<span class="w">      </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span>
+<span class="w">        </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;progress-fill&quot;</span><span class="w"> </span>
+<span class="w">        </span><span class="nx">style</span><span class="o">=</span><span class="p">{{</span><span class="w"> </span><span class="nx">width</span><span class="o">:</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">selectedJob</span><span class="p">.</span><span class="nx">progress</span><span class="si">}</span><span class="sb">%`</span><span class="w"> </span><span class="p">}}</span>
+<span class="w">      </span><span class="o">&gt;&lt;</span><span class="err">/div&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;progress-text&quot;</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">selectedJob</span><span class="p">.</span><span class="nx">progress</span><span class="p">}</span><span class="o">%</span><span class="w"> </span><span class="nx">Complete</span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+<span class="w">  </span><span class="o">&lt;</span><span class="err">/div&gt;</span>
+<span class="p">)}</span>
+</code></pre></div>
+
+<h3>UI Components</h3>
+<h4>1. <strong>Tabbed Interface</strong></h4>
+<ul>
+<li>🚀 Create Job</li>
+<li>📋 All Jobs  </li>
+<li>📊 Job Status</li>
+<li>❤️ Health Check</li>
+</ul>
+<h4>2. <strong>File Upload Interface</strong></h4>
+<ul>
+<li>Drag-and-drop file selection</li>
+<li>File type validation</li>
+<li>Parameter configuration</li>
+<li>Real-time feedback</li>
+</ul>
+<h4>3. <strong>Job Management</strong></h4>
+<ul>
+<li>Job list with status indicators</li>
+<li>Progress bars for active jobs</li>
+<li>Download links for completed jobs</li>
+<li>Delete functionality</li>
+</ul>
+<hr />
+<h2>🔄 Data Flow</h2>
+<h3>1. Job Creation Flow</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">sequenceDiagram</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">F</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">Frontend</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">API</span><span class="w"> </span><span class="n">Server</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">SadTalker</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">G</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">GCS</span>
+
+<span class="w">    </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">POST</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="w"> </span><span class="p">(</span><span class="n">files</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">params</span><span class="p">)</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Save</span><span class="w"> </span><span class="n">files</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">uploads</span><span class="o">/</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Create</span><span class="w"> </span><span class="n">job</span><span class="w"> </span><span class="n">record</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">S</span><span class="p">:</span><span class="w"> </span><span class="n">Start</span><span class="w"> </span><span class="n">background</span><span class="w"> </span><span class="n">processing</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">F</span><span class="p">:</span><span class="w"> </span><span class="n">Return</span><span class="w"> </span><span class="n">job_id</span>
+
+<span class="w">    </span><span class="n">S</span><span class="o">-&gt;&gt;</span><span class="n">S</span><span class="p">:</span><span class="w"> </span><span class="n">Process</span><span class="w"> </span><span class="n">image</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">audio</span>
+<span class="w">    </span><span class="n">S</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Update</span><span class="w"> </span><span class="n">progress</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="o">%</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="o">%</span><span class="p">,</span><span class="w"> </span><span class="mi">80</span><span class="o">%</span><span class="p">)</span>
+<span class="w">    </span><span class="n">S</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Save</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">results</span><span class="o">/</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">G</span><span class="p">:</span><span class="w"> </span><span class="n">Upload</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">GCS</span>
+<span class="w">    </span><span class="n">G</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Return</span><span class="w"> </span><span class="n">public</span><span class="w"> </span><span class="n">URL</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">Update</span><span class="w"> </span><span class="n">job</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed</span>
+</code></pre></div>
+
+<h3>2. Status Polling Flow</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">sequenceDiagram</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">F</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">Frontend</span>
+<span class="w">    </span><span class="n">participant</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">API</span><span class="w"> </span><span class="n">Server</span>
+
+<span class="w">    </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="o">/</span><span class="p">{</span><span class="n">job_id</span><span class="p">}</span>
+<span class="w">    </span><span class="n">A</span><span class="o">-&gt;&gt;</span><span class="n">F</span><span class="p">:</span><span class="w"> </span><span class="n">Return</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">progress</span>
+
+<span class="w">    </span><span class="n">alt</span><span class="w"> </span><span class="n">Job</span><span class="w"> </span><span class="n">still</span><span class="w"> </span><span class="n">processing</span>
+<span class="w">        </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">F</span><span class="p">:</span><span class="w"> </span><span class="n">Wait</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">seconds</span>
+<span class="w">        </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">A</span><span class="p">:</span><span class="w"> </span><span class="n">GET</span><span class="w"> </span><span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">jobs</span><span class="o">/</span><span class="p">{</span><span class="n">job_id</span><span class="p">}</span><span class="w"> </span><span class="p">(</span><span class="n">repeat</span><span class="p">)</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="n">Job</span><span class="w"> </span><span class="n">completed</span>
+<span class="w">        </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">F</span><span class="p">:</span><span class="w"> </span><span class="n">Display</span><span class="w"> </span><span class="n">video</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">download</span><span class="w"> </span><span class="n">link</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="n">Job</span><span class="w"> </span><span class="n">failed</span>
+<span class="w">        </span><span class="n">F</span><span class="o">-&gt;&gt;</span><span class="n">F</span><span class="p">:</span><span class="w"> </span><span class="n">Show</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="n">message</span>
+<span class="w">    </span><span class="n">end</span>
+</code></pre></div>
+
+<hr />
+<h2>☁️ Google Cloud Storage Integration</h2>
+<h3>Configuration</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># GCS Setup in real_api_server.py</span>
+<span class="n">GCS_BUCKET_NAME</span> <span class="o">=</span> <span class="s2">&quot;gcs-vodacast-bucket&quot;</span>
+<span class="n">GCS_CREDENTIALS_FILE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s2">&quot;gcs_credentials.json&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_to_gcs</span><span class="p">(</span><span class="n">local_file</span><span class="p">,</span> <span class="n">bucket_name</span><span class="p">,</span> <span class="n">destination_blob</span><span class="p">):</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">Client</span><span class="o">.</span><span class="n">from_service_account_json</span><span class="p">(</span><span class="n">GCS_CREDENTIALS_FILE</span><span class="p">)</span>
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">bucket</span><span class="p">(</span><span class="n">bucket_name</span><span class="p">)</span>
+    <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">destination_blob</span><span class="p">)</span>
+    <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_filename</span><span class="p">(</span><span class="n">local_file</span><span class="p">)</span>
+
+    <span class="c1"># Make the file public</span>
+    <span class="n">blob</span><span class="o">.</span><span class="n">make_public</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">blob</span><span class="o">.</span><span class="n">public_url</span>
+</code></pre></div>
+
+<h3>Upload Process</h3>
+<ol>
+<li><strong>Local Processing</strong>: SadTalker generates video locally</li>
+<li><strong>GCS Upload</strong>: Video uploaded to <code>{job_id}/output.mp4</code></li>
+<li><strong>Public Access</strong>: File made publicly accessible</li>
+<li><strong>URL Return</strong>: Public URL returned to frontend</li>
+</ol>
+<h3>Benefits</h3>
+<ul>
+<li>✅ Scalable storage</li>
+<li>✅ Global CDN access</li>
+<li>✅ No server storage limits</li>
+<li>✅ Direct video streaming</li>
+</ul>
+<hr />
+<h2>🚨 Error Handling</h2>
+<h3>API Error Responses</h3>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Both source_image and driven_audio files are required&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Invalid file type&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Job not found&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3>Frontend Error Handling</h3>
+<div class="codehilite"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">handleApiCall</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">url</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">response</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">errorData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="nx">errorData</span><span class="p">.</span><span class="nx">error</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="sb">`HTTP error! status: </span><span class="si">${</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;API Error:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">error</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">toast</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Error: &#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="nx">error</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<h3>Common Error Scenarios</h3>
+<ol>
+<li><strong>File Upload Errors</strong></li>
+<li>Invalid file types</li>
+<li>File size limits</li>
+<li>
+<p>Network timeouts</p>
+</li>
+<li>
+<p><strong>Processing Errors</strong></p>
+</li>
+<li>SadTalker inference failures</li>
+<li>Insufficient resources</li>
+<li>
+<p>Model loading issues</p>
+</li>
+<li>
+<p><strong>Storage Errors</strong></p>
+</li>
+<li>GCS authentication failures</li>
+<li>Upload timeouts</li>
+<li>Permission issues</li>
+</ol>
+<hr />
+<h2>🚀 Deployment Guide</h2>
+<h3>1. Backend Deployment</h3>
+<h4>Prerequisites</h4>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</code></pre></div>
+
+<h4>Environment Setup</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Set up GCS credentials</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">GOOGLE_APPLICATION_CREDENTIALS</span><span class="o">=</span><span class="s2">&quot;path/to/gcs_credentials.json&quot;</span>
+
+<span class="c1"># Start the server</span>
+python<span class="w"> </span>real_api_server.py
+</code></pre></div>
+
+<h4>Production Configuration</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># In real_api_server.py</span>
+<span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">7860</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>2. Frontend Deployment</h3>
+<h4>Development</h4>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>sadtalker-frontend-demo
+npm<span class="w"> </span>install
+npm<span class="w"> </span>start
+</code></pre></div>
+
+<h4>Production Build</h4>
+<div class="codehilite"><pre><span></span><code>npm<span class="w"> </span>run<span class="w"> </span>build
+<span class="c1"># Serve the build folder with a web server</span>
+</code></pre></div>
+
+<h3>3. Google Cloud Setup</h3>
+<h4>Create Service Account</h4>
+<ol>
+<li>Go to Google Cloud Console</li>
+<li>Create new service account</li>
+<li>Download JSON credentials</li>
+<li>Place in project root as <code>gcs_credentials.json</code></li>
+</ol>
+<h4>Bucket Configuration</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Create bucket</span>
+gsutil<span class="w"> </span>mb<span class="w"> </span>gs://gcs-vodacast-bucket
+
+<span class="c1"># Set public access</span>
+gsutil<span class="w"> </span>iam<span class="w"> </span>ch<span class="w"> </span>allUsers:objectViewer<span class="w"> </span>gs://gcs-vodacast-bucket
+</code></pre></div>
+
+<hr />
+<h2>🧪 Testing</h2>
+<h3>1. API Testing with Postman</h3>
+<ul>
+<li>Import <code>SadTalker_API_Postman_Collection.json</code></li>
+<li>Test all endpoints with sample files</li>
+<li>Verify file upload and processing</li>
+</ul>
+<h3>2. Frontend Testing</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Run frontend tests</span>
+<span class="nb">cd</span><span class="w"> </span>sadtalker-frontend-demo
+npm<span class="w"> </span><span class="nb">test</span>
+</code></pre></div>
+
+<h3>3. Integration Testing</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Test complete workflow</span>
+<span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">testCompleteWorkflow</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// 1. Health check</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/api/health&#39;</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// 2. Create job</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">formData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">FormData</span><span class="p">();</span>
+<span class="w">  </span><span class="nx">formData</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s1">&#39;source_image&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">imageFile</span><span class="p">);</span>
+<span class="w">  </span><span class="nx">formData</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s1">&#39;driven_audio&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">audioFile</span><span class="p">);</span>
+
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/api/jobs&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="nx">formData</span>
+<span class="w">  </span><span class="p">});</span>
+
+<span class="w">  </span><span class="c1">// 3. Poll for completion</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">jobId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">job</span><span class="p">.</span><span class="nx">job_id</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;processing&#39;</span><span class="p">;</span>
+
+<span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;processing&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Promise</span><span class="p">(</span><span class="nx">resolve</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">setTimeout</span><span class="p">(</span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="mf">2000</span><span class="p">));</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">statusResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`/api/jobs/</span><span class="si">${</span><span class="nx">jobId</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">statusResponse</span><span class="p">.</span><span class="nx">status</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c1">// 4. Verify result</span>
+<span class="w">  </span><span class="nx">assert</span><span class="p">(</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;completed&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="nx">assert</span><span class="p">(</span><span class="nx">statusResponse</span><span class="p">.</span><span class="nx">s3_url</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2>🔧 Troubleshooting</h2>
+<h3>Common Issues</h3>
+<h4>1. <strong>Server Won't Start</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check port availability</span>
+netstat<span class="w"> </span>-an<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="m">7860</span>
+
+<span class="c1"># Check Python dependencies</span>
+pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>flask
+</code></pre></div>
+
+<h4>2. <strong>File Upload Fails</strong></h4>
+<ul>
+<li>Verify file types are supported</li>
+<li>Check file size limits</li>
+<li>Ensure uploads directory exists</li>
+</ul>
+<h4>3. <strong>GCS Upload Errors</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check credentials</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;gcs_credentials.json&#39;</span><span class="p">))</span>
+
+<span class="c1"># Test GCS connection</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">google.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">storage</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">Client</span><span class="o">.</span><span class="n">from_service_account_json</span><span class="p">(</span><span class="s1">&#39;gcs_credentials.json&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<h4>4. <strong>Frontend Connection Issues</strong></h4>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Check API base URL</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">API_BASE_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;http://localhost:7860&#39;</span><span class="p">;</span>
+
+<span class="c1">// Verify CORS settings</span>
+<span class="c1">// In real_api_server.py: CORS(app)</span>
+</code></pre></div>
+
+<h4>5. <strong>Job Processing Stuck</strong></h4>
+<ul>
+<li>Check SadTalker model files in <code>checkpoints/</code></li>
+<li>Verify inference.py is working</li>
+<li>Check system resources (CPU/Memory)</li>
+</ul>
+<h3>Debug Mode</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Enable debug logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+<span class="c1"># In real_api_server.py</span>
+<span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2>📊 Performance Optimization</h2>
+<h3>1. <strong>Backend Optimizations</strong></h3>
+<ul>
+<li>Use Redis for job queue (instead of in-memory)</li>
+<li>Implement job cleanup after completion</li>
+<li>Add request rate limiting</li>
+<li>Use async processing with Celery</li>
+</ul>
+<h3>2. <strong>Frontend Optimizations</strong></h3>
+<ul>
+<li>Implement virtual scrolling for large job lists</li>
+<li>Add image compression before upload</li>
+<li>Use WebSocket for real-time updates</li>
+<li>Implement offline support</li>
+</ul>
+<h3>3. <strong>Storage Optimizations</strong></h3>
+<ul>
+<li>Implement file compression</li>
+<li>Use CDN for video delivery</li>
+<li>Add automatic cleanup of old files</li>
+<li>Implement file deduplication</li>
+</ul>
+<hr />
+<h2>🔒 Security Considerations</h2>
+<h3>1. <strong>API Security</strong></h3>
+<ul>
+<li>Add authentication/authorization</li>
+<li>Implement rate limiting</li>
+<li>Validate file types and sizes</li>
+<li>Sanitize user inputs</li>
+</ul>
+<h3>2. <strong>File Security</strong></h3>
+<ul>
+<li>Scan uploaded files for malware</li>
+<li>Implement file size limits</li>
+<li>Use secure file storage</li>
+<li>Add access controls</li>
+</ul>
+<h3>3. <strong>Frontend Security</strong></h3>
+<ul>
+<li>Implement CSRF protection</li>
+<li>Use HTTPS in production</li>
+<li>Validate all user inputs</li>
+<li>Implement proper error handling</li>
+</ul>
+<hr />
+<h2>📈 Monitoring and Analytics</h2>
+<h3>1. <strong>API Metrics</strong></h3>
+<ul>
+<li>Request/response times</li>
+<li>Job success/failure rates</li>
+<li>File upload/download statistics</li>
+<li>Error rates and types</li>
+</ul>
+<h3>2. <strong>System Metrics</strong></h3>
+<ul>
+<li>CPU/Memory usage</li>
+<li>Disk space utilization</li>
+<li>Network bandwidth</li>
+<li>GCS storage costs</li>
+</ul>
+<h3>3. <strong>User Analytics</strong></h3>
+<ul>
+<li>Job creation patterns</li>
+<li>Feature usage statistics</li>
+<li>Error frequency</li>
+<li>Performance metrics</li>
+</ul>
+<hr />
+<h2>🎯 Future Enhancements</h2>
+<h3>1. <strong>API Improvements</strong></h3>
+<ul>
+<li>WebSocket support for real-time updates</li>
+<li>Batch job processing</li>
+<li>Job scheduling</li>
+<li>Advanced video processing options</li>
+</ul>
+<h3>2. <strong>Frontend Features</strong></h3>
+<ul>
+<li>Drag-and-drop file upload</li>
+<li>Video preview before processing</li>
+<li>Batch job management</li>
+<li>User authentication</li>
+</ul>
+<h3>3. <strong>Infrastructure</strong></h3>
+<ul>
+<li>Kubernetes deployment</li>
+<li>Auto-scaling</li>
+<li>Load balancing</li>
+<li>Multi-region deployment</li>
+</ul>
+<hr />
+<h2>📞 Support and Maintenance</h2>
+<h3>1. <strong>Logging</strong></h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="c1"># Configure logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+    <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">,</span>
+    <span class="n">handlers</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s1">&#39;sadtalker_api.log&#39;</span><span class="p">),</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>2. <strong>Health Monitoring</strong></h3>
+<div class="codehilite"><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/health/detailed&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">detailed_health</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;healthy&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;timestamp&#39;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="s1">&#39;active_jobs&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">([</span><span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">jobs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">j</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;processing&#39;</span><span class="p">]),</span>
+        <span class="s1">&#39;total_jobs&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">jobs</span><span class="p">),</span>
+        <span class="s1">&#39;disk_usage&#39;</span><span class="p">:</span> <span class="n">get_disk_usage</span><span class="p">(),</span>
+        <span class="s1">&#39;memory_usage&#39;</span><span class="p">:</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+    <span class="p">})</span>
+</code></pre></div>
+
+<h3>3. <strong>Backup Strategy</strong></h3>
+<ul>
+<li>Regular database backups</li>
+<li>GCS bucket versioning</li>
+<li>Configuration file backups</li>
+<li>Log file rotation</li>
+</ul>
+<hr />
+<p>This comprehensive documentation covers all aspects of your SadTalker API system, from basic usage to advanced deployment scenarios. The system demonstrates a well-architected solution for AI-powered video generation with modern web technologies.</p>
+        </body>
+        </html>
+        

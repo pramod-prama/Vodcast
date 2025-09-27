@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SadTalker API Demo</title>
+    <title>Prama Vodcast </title>
     <style>
         * {
             margin: 0;
@@ -325,8 +325,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎭 SadTalker API Demo</h1>
-            <p>Test all API endpoints for talking face video generation</p>
+            <h1>🎭 Prama Vodcast</h1>
+            <!-- <p>Test all API endpoints for talking face video generation</p> -->
         </div>
 
         <!-- Health Status -->
@@ -364,6 +364,14 @@
                                 <input type="file" id="audioFile" accept="audio/*" onchange="handleFileSelect('audioFile', 'audioText')">
                                 <div id="audioText">Click to select audio</div>
                             </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Or Generate Audio from Text (English)</label>
+                            <textarea id="textToSpeech" placeholder="Enter English text to convert to speech..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+                            <button type="button" class="btn btn-secondary" onclick="generateSpeech()" style="margin-top: 10px;">
+                                🎤 Generate Speech
+                            </button>
                         </div>
                     </div>
 
@@ -730,6 +738,80 @@
             } catch (error) {
                 console.error('Error deleting job:', error);
                 alert('Failed to delete job');
+            }
+        }
+
+        // Generate speech from text
+        async function generateSpeech() {
+            const text = document.getElementById('textToSpeech').value.trim();
+            
+            if (!text) {
+                alert('Please enter text to convert to speech');
+                return;
+            }
+
+            const generateBtn = document.querySelector('button[onclick="generateSpeech()"]');
+            const originalText = generateBtn.innerHTML;
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="loading"></span> Generating...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/text-to-speech`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        text: text
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Decode base64 audio data
+                    const audioBytes = atob(data.audio_data);
+                    const audioArray = new Uint8Array(audioBytes.length);
+                    for (let i = 0; i < audioBytes.length; i++) {
+                        audioArray[i] = audioBytes.charCodeAt(i);
+                    }
+                    
+                    // Create a blob from the audio data
+                    const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                    
+                    // Create a file object from the blob
+                    const audioFile = new File([audioBlob], data.filename || 'generated_speech.wav', { type: 'audio/wav' });
+                    
+                    // Create a new FileList-like object
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(audioFile);
+                    
+                    // Set the file to the audio input
+                    const audioInput = document.getElementById('audioFile');
+                    audioInput.files = dataTransfer.files;
+                    
+                    // Update the display text
+                    document.getElementById('audioText').textContent = data.filename || 'generated_speech.wav';
+                    document.getElementById('audioText').style.color = '#667eea';
+                    document.getElementById('audioText').style.fontWeight = '600';
+                    
+                    // Clear the text input
+                    document.getElementById('textToSpeech').value = '';
+                    
+                    alert('Speech generated successfully!');
+                } else {
+                    let errorMessage = 'Error: ' + (data.error || 'Failed to generate speech');
+                    if (data.fallback_suggestion) {
+                        errorMessage += '\n\nSuggestion: ' + data.fallback_suggestion;
+                    }
+                    alert(errorMessage);
+                }
+            } catch (error) {
+                console.error('Error generating speech:', error);
+                alert('Failed to generate speech');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = originalText;
             }
         }
 

@@ -16,6 +16,9 @@ from werkzeug.utils import secure_filename
 import tempfile
 import shutil
 from google.cloud import storage
+import base64
+import pyttsx3
+import io
 
 
 app = Flask(__name__)
@@ -164,6 +167,92 @@ def health_check():
         'active_jobs': len([job for job in jobs.values() if job['status'] == 'processing'])
     })
 
+
+@app.route('/api/text-to-speech', methods=['POST'])
+def text_to_speech():
+    """Convert text to speech using pyttsx3 (local TTS) - English only"""
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'error': 'Text is required'}), 400
+        
+        # Initialize the TTS engine
+        engine = pyttsx3.init()
+        
+        # Set properties
+        engine.setProperty('rate', 150)  # Speed of speech
+        engine.setProperty('volume', 0.9)  # Volume level (0.0 to 1.0)
+        
+        # Get available voices and select English voice
+        voices = engine.getProperty('voices')
+        selected_voice = None
+        
+        if voices:
+            # Prefer female English voices
+            for voice in voices:
+                if any(name in voice.name.lower() for name in ['zira', 'hazel', 'susan', 'female']):
+                    selected_voice = voice
+                    break
+            
+            # If no female voice found, use any English voice
+            if not selected_voice:
+                for voice in voices:
+                    if 'english' in voice.name.lower() or 'en-' in voice.id.lower():
+                        selected_voice = voice
+                        break
+            
+            # If still no voice found, use the first available voice
+            if not selected_voice and voices:
+                selected_voice = voices[0]
+            
+            if selected_voice:
+                engine.setProperty('voice', selected_voice.id)
+                print(f"Using voice: {selected_voice.name}")
+        
+        # Save the audio to a temporary file
+        temp_filename = f"tts_{uuid.uuid4().hex}.wav"
+        temp_path = os.path.join(UPLOAD_FOLDER, temp_filename)
+        
+        # Save to file
+        engine.save_to_file(text, temp_path)
+        engine.runAndWait()
+        
+        # Validate the generated audio file
+        if not os.path.exists(temp_path):
+            return jsonify({'error': 'Failed to generate audio file'}), 500
+        
+        file_size = os.path.getsize(temp_path)
+        if file_size < 1000:  # Less than 1KB is likely empty/corrupted
+            os.remove(temp_path)
+            return jsonify({
+                'error': f'Generated audio file is too small ({file_size} bytes). This may indicate a system TTS issue.',
+                'fallback_suggestion': 'Check system TTS settings'
+            }), 400
+        
+        # Read the file and encode it as base64
+        with open(temp_path, "rb") as audio_file:
+            audio_data = base64.b64encode(audio_file.read()).decode('utf-8')
+        
+        # Clean up the temporary file
+        os.remove(temp_path)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Text converted to speech successfully',
+            'audio_data': audio_data,
+            'filename': f'generated_speech_{int(time.time())}.wav',
+            'file_size': file_size
+        })
+        
+    except Exception as e:
+        print(f"Text-to-speech error: {str(e)}")
+        return jsonify({'error': f'Text-to-speech failed: {str(e)}'}), 500
+
+
+
+
 @app.route('/api/jobs', methods=['POST'])
 def create_job():
     """Create a new job"""
@@ -273,6 +362,7 @@ if __name__ == '__main__':
     print("🚀 Starting Real SadTalker API server on http://localhost:7860")
     print("📝 Available endpoints:")
     print("   GET  /api/health - Health check")
+    print("   POST /api/text-to-speech - Convert text to speech")
     print("   POST /api/jobs - Create a new job")
     print("   GET  /api/jobs - List all jobs")
     print("   GET  /api/jobs/<job_id> - Get job status")
