@@ -368,21 +368,21 @@
 
                         <div class="form-group">
                             <label>Or Generate Audio from Text</label>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-size: 14px; margin-bottom: 5px; display: block;">Language:</label>
+                                <select id="languageSelect" style="width: 100%; padding: 8px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;">
+                                    <option value="en-US">🇺🇸 English (US)</option>
+                                    <option value="ur-IN">🇵🇰 Urdu (India)</option>
+                                    <option value="hi-IN">🇮🇳 Hindi (India)</option>
+                                </select>
+                            </div>
+                            
                             <textarea id="textToSpeech" placeholder="Enter text to convert to speech..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
                             
-                            <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
-                                <div style="flex: 1;">
-                                    <label style="font-size: 14px; margin-bottom: 5px; display: block;">Language:</label>
-                                    <select id="languageSelect" style="width: 100%; padding: 8px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;">
-                                        <option value="en-US">🇺🇸 English (US)</option>
-                                        <option value="ur-IN">🇵🇰 Urdu (India)</option>
-                                        <option value="hi-IN">🇮🇳 Hindi (India)</option>
-                                    </select>
-                                </div>
-                                <button type="button" class="btn btn-secondary" onclick="generateSpeech()" style="margin-top: 20px;">
-                                    🎤 Generate Speech
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="generateSpeech()" style="margin-top: 15px; width: 100%;">
+                                🎤 Generate Speech
+                            </button>
                         </div>
                     </div>
 
