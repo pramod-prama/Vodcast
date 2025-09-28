@@ -17,7 +17,6 @@ import tempfile
 import shutil
 from google.cloud import storage
 import base64
-import pyttsx3
 import io
 
 
@@ -38,11 +37,11 @@ jobs = {}
 
 # GCS Setup
 GCS_BUCKET_NAME = "gcs-vodacast-bucket"  # replace with your bucket name
-# GCS_CREDENTIALS_FILE = "gcs_credentials.json"  # path to your service account JSON
-GCS_CREDENTIALS_FILE = os.path.join(os.getcwd(), "gcs_credentials.json")
+# GCS_CREDENTIALS_FILE_FOR_VIDEO_UPLOADING = "gcs_credentials.json"  # path to your service account JSON
+GCS_CREDENTIALS_FILE_FOR_VIDEO_UPLOADING = os.path.join(os.getcwd(), "gcs_credentials.json")
 
 def upload_to_gcs(local_file, bucket_name, destination_blob):
-    client = storage.Client.from_service_account_json(GCS_CREDENTIALS_FILE)
+    client = storage.Client.from_service_account_json(GCS_CREDENTIALS_FILE_FOR_VIDEO_UPLOADING)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob)
     blob.upload_from_filename(local_file)
@@ -167,87 +166,135 @@ def health_check():
         'active_jobs': len([job for job in jobs.values() if job['status'] == 'processing'])
     })
 
+import requests
+from google.oauth2 import service_account
+import google.auth.transport.requests
+
+GCS_CREDENTIALS_FILE = os.path.join(os.getcwd(), "revoiz-ai-dd6bb5e7b3ee.json")
+def get_google_access_token():
+    """Fetch OAuth2 access token using service account"""
+    credentials = service_account.Credentials.from_service_account_file(
+        GCS_CREDENTIALS_FILE,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    auth_req = google.auth.transport.requests.Request()
+    credentials.refresh(auth_req)
+    return credentials.token
+
 
 @app.route('/api/text-to-speech', methods=['POST'])
 def text_to_speech():
-    """Convert text to speech using pyttsx3 (local TTS) - English only"""
+    """Convert text to speech using Google Cloud Text-to-Speech REST API with language support"""
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
+        language_code = data.get('language_code', 'en-US')  # Default to English
         
         if not text:
             return jsonify({'error': 'Text is required'}), 400
         
-        # Initialize the TTS engine
-        engine = pyttsx3.init()
+        # Validate language code
+        valid_languages = {
+            'en-US': 'English (US)',
+            'ur-IN': 'Urdu (India)', 
+            'hi-IN': 'Hindi (India)'
+        }
         
-        # Set properties
-        engine.setProperty('rate', 150)  # Speed of speech
-        engine.setProperty('volume', 0.9)  # Volume level (0.0 to 1.0)
-        
-        # Get available voices and select English voice
-        voices = engine.getProperty('voices')
-        selected_voice = None
-        
-        if voices:
-            # Prefer female English voices
-            for voice in voices:
-                if any(name in voice.name.lower() for name in ['zira', 'hazel', 'susan', 'female']):
-                    selected_voice = voice
-                    break
-            
-            # If no female voice found, use any English voice
-            if not selected_voice:
-                for voice in voices:
-                    if 'english' in voice.name.lower() or 'en-' in voice.id.lower():
-                        selected_voice = voice
-                        break
-            
-            # If still no voice found, use the first available voice
-            if not selected_voice and voices:
-                selected_voice = voices[0]
-            
-            if selected_voice:
-                engine.setProperty('voice', selected_voice.id)
-                print(f"Using voice: {selected_voice.name}")
-        
-        # Save the audio to a temporary file
-        temp_filename = f"tts_{uuid.uuid4().hex}.wav"
-        temp_path = os.path.join(UPLOAD_FOLDER, temp_filename)
-        
-        # Save to file
-        engine.save_to_file(text, temp_path)
-        engine.runAndWait()
-        
-        # Validate the generated audio file
-        if not os.path.exists(temp_path):
-            return jsonify({'error': 'Failed to generate audio file'}), 500
-        
-        file_size = os.path.getsize(temp_path)
-        if file_size < 1000:  # Less than 1KB is likely empty/corrupted
-            os.remove(temp_path)
+        if language_code not in valid_languages:
             return jsonify({
-                'error': f'Generated audio file is too small ({file_size} bytes). This may indicate a system TTS issue.',
-                'fallback_suggestion': 'Check system TTS settings'
+                'error': f'Invalid language code. Supported languages: {list(valid_languages.keys())}'
             }), 400
         
-        # Read the file and encode it as base64
-        with open(temp_path, "rb") as audio_file:
-            audio_data = base64.b64encode(audio_file.read()).decode('utf-8')
+        print(f"Generating speech for language: {language_code} ({valid_languages[language_code]})")
         
-        # Clean up the temporary file
-        os.remove(temp_path)
+        # Get access token
+        access_token = get_google_access_token()
         
-        return jsonify({
-            'status': 'success',
-            'message': 'Text converted to speech successfully',
-            'audio_data': audio_data,
-            'filename': f'generated_speech_{int(time.time())}.wav',
-            'file_size': file_size
-        })
+        # Configure voice parameters based on language
+        voice_config = {
+            'en-US': {
+                'languageCode': 'en-US',
+                'name': 'en-US-Standard-A',  # Female voice
+                'ssmlGender': 'FEMALE'
+            },
+            'ur-IN': {
+                'languageCode': 'ur-IN',
+                'name': 'ur-IN-Standard-A',  # Standard voice for Urdu
+                'ssmlGender': 'FEMALE'
+            },
+            'hi-IN': {
+                'languageCode': 'hi-IN',
+                'name': 'hi-IN-Standard-A',  # Female voice for Hindi
+                'ssmlGender': 'FEMALE'
+            }
+        }
+        
+        # Prepare the request payload
+        payload = {
+            "input": {
+                "text": text
+            },
+            "voice": voice_config[language_code],
+            "audioConfig": {
+                "audioEncoding": "MP3"
+            }
+        }
+        
+        # Make the API request to Google Cloud Text-to-Speech
+        api_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "x-goog-user-project": "revoiz-ai",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        print(f"Making request to Google Cloud TTS API...")
+        response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+        print(f"Response: {response}")
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            
+            # Get the base64 audio content
+            audio_content_b64 = response_data.get('audioContent', '')
+
+            print(f"Audio content: {audio_content_b64}")
+            if not audio_content_b64:
+                return jsonify({'error': 'No audio content received from Google Cloud TTS'}), 500
+            
+            # Decode the base64 audio content
+            audio_content = base64.b64decode(audio_content_b64)
+
+
+            print(f"audio_content: {audio_content}")
+            # Generate filename with timestamp
+            filename = f'generated_speech_{language_code}_{int(time.time())}.mp3'
+
+            print(f"filename: {filename}")
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Text converted to speech successfully in {valid_languages[language_code]}',
+                'audio_data': audio_content_b64,  # Return the base64 string directly
+                'filename': filename,
+                'language_code': language_code,
+                'language_name': valid_languages[language_code],
+                'file_size': len(audio_content),
+                'audio_format': 'mp3'
+            })
+        else:
+            error_msg = f"Google Cloud TTS API error: {response.status_code}"
+            try:
+                error_data = response.json()
+                error_msg += f" - {error_data.get('error', {}).get('message', 'Unknown error')}"
+            except:
+                error_msg += f" - {response.text}"
+            
+            print(f"TTS API Error: {error_msg}")
+            return jsonify({'error': error_msg}), 500
         
     except Exception as e:
-        print(f"Text-to-speech error: {str(e)}")
+        print(f"Google Cloud Text-to-speech error: {str(e)}")
         return jsonify({'error': f'Text-to-speech failed: {str(e)}'}), 500
 
 

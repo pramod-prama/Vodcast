@@ -361,17 +361,28 @@
                         <div class="form-group">
                             <label>Audio File *</label>
                             <div class="file-upload" onclick="document.getElementById('audioFile').click()">
-                                <input type="file" id="audioFile" accept="audio/*" onchange="handleFileSelect('audioFile', 'audioText')">
-                                <div id="audioText">Click to select audio</div>
+                                <input type="file" id="audioFile" accept="audio/*,.mp3,.wav,.m4a" onchange="handleFileSelect('audioFile', 'audioText')">
+                                <div id="audioText">Click to select audio (MP3, WAV, M4A)</div>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label>Or Generate Audio from Text (English)</label>
-                            <textarea id="textToSpeech" placeholder="Enter English text to convert to speech..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
-                            <button type="button" class="btn btn-secondary" onclick="generateSpeech()" style="margin-top: 10px;">
-                                🎤 Generate Speech
-                            </button>
+                            <label>Or Generate Audio from Text</label>
+                            <textarea id="textToSpeech" placeholder="Enter text to convert to speech..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 14px; margin-bottom: 5px; display: block;">Language:</label>
+                                    <select id="languageSelect" style="width: 100%; padding: 8px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 14px;">
+                                        <option value="en-US">🇺🇸 English (US)</option>
+                                        <option value="ur-IN">🇵🇰 Urdu (India)</option>
+                                        <option value="hi-IN">🇮🇳 Hindi (India)</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-secondary" onclick="generateSpeech()" style="margin-top: 20px;">
+                                    🎤 Generate Speech
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -744,6 +755,7 @@
         // Generate speech from text
         async function generateSpeech() {
             const text = document.getElementById('textToSpeech').value.trim();
+            const languageCode = document.getElementById('languageSelect').value;
             
             if (!text) {
                 alert('Please enter text to convert to speech');
@@ -762,7 +774,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ 
-                        text: text
+                        text: text,
+                        language_code: languageCode
                     })
                 });
 
@@ -776,11 +789,11 @@
                         audioArray[i] = audioBytes.charCodeAt(i);
                     }
                     
-                    // Create a blob from the audio data
-                    const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                    // Create a blob from the audio data (now MP3 format)
+                    const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
                     
                     // Create a file object from the blob
-                    const audioFile = new File([audioBlob], data.filename || 'generated_speech.wav', { type: 'audio/wav' });
+                    const audioFile = new File([audioBlob], data.filename || 'generated_speech.mp3', { type: 'audio/mp3' });
                     
                     // Create a new FileList-like object
                     const dataTransfer = new DataTransfer();
@@ -791,14 +804,15 @@
                     audioInput.files = dataTransfer.files;
                     
                     // Update the display text
-                    document.getElementById('audioText').textContent = data.filename || 'generated_speech.wav';
+                    document.getElementById('audioText').textContent = data.filename || 'generated_speech.mp3';
                     document.getElementById('audioText').style.color = '#667eea';
                     document.getElementById('audioText').style.fontWeight = '600';
                     
                     // Clear the text input
                     document.getElementById('textToSpeech').value = '';
                     
-                    alert('Speech generated successfully!');
+                    // Show success message with language info
+                    alert(`Speech generated successfully in ${data.language_name}!`);
                 } else {
                     let errorMessage = 'Error: ' + (data.error || 'Failed to generate speech');
                     if (data.fallback_suggestion) {
