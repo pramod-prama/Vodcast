@@ -1,40 +1,126 @@
-# Vodcast - SadTalker API Integration
+# Vodcast - SadTalker API Integration with Multi-Language TTS
 
-This repository includes a Gradio UI for SadTalker and now exposes a production-friendly API for React integration, including background jobs, WebSocket progress updates, and optional S3 uploads.
+This repository includes a comprehensive SadTalker API system with multi-language Text-to-Speech support. It features a production-ready API for React integration, background job processing, real-time progress updates, Google Cloud Storage integration, and advanced TTS capabilities supporting English, Urdu, and Hindi languages.
 
-## Endpoints
+## 🎯 Key Features
 
-- POST `/api/jobs`
+- **🎭 SadTalker Integration**: Generate talking face videos from images and audio
+- **🌍 Multi-Language TTS**: Google Cloud TTS supporting English, Urdu, and Hindi
+- **⚡ Async Processing**: Background job processing with real-time progress updates
+- **☁️ Cloud Storage**: Google Cloud Storage integration for scalable file management
+- **🎨 Modern Frontend**: React-based web interface with real-time updates
+- **🔧 Production Ready**: Comprehensive error handling and monitoring
+
+## 📡 API Endpoints
+
+### Video Generation
+- **POST** `/api/jobs`
   - Form (multipart/form-data):
     - `source_image` (file)
     - `driven_audio` (file)
     - Optional fields: `preprocess`, `still_mode`, `use_enhancer`, `batch_size`, `size`, `pose_style`
   - Response: `{ "status": "ok", "job_id": "<uuid>" }`
 
-- GET `/api/jobs/{job_id}`
+- **GET** `/api/jobs/{job_id}`
   - Response: `{ status, progress, result_path?, s3_url?, error?, last_event? }`
 
-- WS `/ws/jobs/{job_id}`
-  - Streams JSON events such as `{ "job_id": "...", "stage": "preprocess", "progress": 20, "message": "..." }`, finishing with `{ "stage": "done", "progress": 100, "output_path": "...", "s3_url": "..." }`.
+### Text-to-Speech
+- **POST** `/api/text-to-speech`
+  - JSON body: `{ "text": "Your text", "language_code": "en-US" }`
+  - Response: `{ "status": "success", "audio_data": "base64_encoded_mp3", "filename": "..." }`
 
-## Environment Variables (S3)
+### System Health
+- **GET** `/api/health`
+  - Response: `{ "status": "healthy", "message": "API is running", "active_jobs": 0 }`
 
-- `S3_BUCKET` (optional): bucket to upload the final mp4
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: AWS credentials
+## 🌍 Supported Languages
 
-If `S3_BUCKET` is set and credentials are valid, the server uploads the result and returns `s3_url`.
+### Text-to-Speech Languages
+- **🇺🇸 English (US)**: `en-US` - High-quality American English voices
+- **🇵🇰 Urdu (Pakistan)**: `ur-PK` - Natural Urdu speech synthesis  
+- **🇮🇳 Hindi (India)**: `hi-IN` - Clear Hindi voice generation
 
-## Run the server
+### Voice Options
+Each language includes multiple voice options:
+- **English**: 18 voices (US, UK, Australian accents, Male/Female)
+- **Urdu**: 4 voices (Pakistani Urdu, Male/Female)
+- **Hindi**: 4 voices (Indian Hindi, Male/Female)
 
-```
+## 🔧 Configuration
+
+### Google Cloud Setup
+- **Service Account**: `revoiz-ai-dd6bb5e7b3ee.json` (Text-to-Speech API enabled)
+- **Storage Bucket**: `gcs-vodacast-bucket` for video file storage
+- **Authentication**: Automatic OAuth2 token generation
+
+### Environment Variables
+- `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account JSON
+- `GCS_BUCKET_NAME`: Google Cloud Storage bucket name
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+```bash
 pip install -r requirements.txt
-python app_sadtalker.py
 ```
 
-Production example:
-
+### 2. Setup Google Cloud Credentials
+```bash
+# Ensure your service account JSON is in place
+cp revoiz-ai-dd6bb5e7b3ee.json gcs_credentials.json
 ```
-uvicorn app_sadtalker:app --host 0.0.0.0 --port 7860
+
+### 3. Start the API Server
+```bash
+# Development
+python real_api_server.py
+
+# Production
+uvicorn real_api_server:app --host 0.0.0.0 --port 7860
+```
+
+### 4. Access the Frontend
+```bash
+# Open in browser
+open sadtalker-frontend-demo/demo.html
+```
+
+## 🎮 Usage Examples
+
+### Text-to-Speech API
+```javascript
+// Generate English speech
+const response = await fetch('/api/text-to-speech', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    text: "Hello, this is a test",
+    language_code: "en-US"
+  })
+});
+
+// Generate Urdu speech
+const urduResponse = await fetch('/api/text-to-speech', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    text: "السلام علیکم، یہ ٹیسٹ ہے",
+    language_code: "ur-PK"
+  })
+});
+```
+
+### Video Generation
+```javascript
+// Create talking face video
+const formData = new FormData();
+formData.append('source_image', imageFile);
+formData.append('driven_audio', audioFile);
+
+const job = await fetch('/api/jobs', {
+  method: 'POST',
+  body: formData
+});
 ```
 
 ## Minimal React usage
