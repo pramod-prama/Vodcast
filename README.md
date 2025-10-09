@@ -85,6 +85,280 @@ uvicorn real_api_server:app --host 0.0.0.0 --port 7860
 open sadtalker-frontend-demo/demo.html
 ```
 
+## 🧪 Testing the System
+
+For comprehensive testing instructions, see the [**TESTING_GUIDE.md**](TESTING_GUIDE.md) file.
+
+### Quick Test Commands:
+```bash
+# Test all APIs automatically
+python test_apis.py
+
+# Or test manually with the frontend
+# 1. Start server: python real_api_server.py
+# 2. Open: sadtalker-frontend-demo/demo.html
+```
+
+## 🧪 Testing the APIs
+
+### Method 1: Using the Frontend Demo (Recommended)
+
+#### Step 1: Start the API Server
+```bash
+# In terminal/command prompt
+cd C:\Users\alira\OneDrive\Desktop\Internship Projects\Vodcast
+python real_api_server.py
+```
+
+You should see:
+```
+🚀 Starting Real SadTalker API server on http://localhost:7860
+📝 Available endpoints:
+   GET  /api/health - Health check
+   POST /api/text-to-speech - Convert text to speech
+   POST /api/jobs - Create a new job
+   GET  /api/jobs - List all jobs
+   GET  /api/jobs/<job_id> - Get job status
+   GET  /api/results/<job_id>/<filename> - Download result files
+
+🧪 You can now test with Postman or run test_api.py
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:7860
+ * Running on http://[your-ip]:7860
+```
+
+#### Step 2: Open the Frontend Demo
+```bash
+# Open the demo.html file in your browser
+# Path: sadtalker-frontend-demo/demo.html
+```
+
+Or double-click on `sadtalker-frontend-demo/demo.html` in your file explorer.
+
+#### Step 3: Test the Features
+
+**🌍 Text-to-Speech Testing:**
+1. Go to the "Text-to-Speech" tab in the demo
+2. Select a language (English, Urdu, Hindi)
+3. Enter text in the text area
+4. Click "Generate Speech"
+5. The generated audio will be automatically loaded into the audio file input
+
+**🎭 Video Generation Testing:**
+1. Go to the "Create Job" tab
+2. Upload a source image (PNG, JPG, JPEG)
+3. Upload or generate audio using TTS
+4. Configure parameters (optional)
+5. Click "Create Job"
+6. Monitor progress in "Job Status" tab
+7. Download the generated video when complete
+
+### Method 2: Using API Testing Tools
+
+#### Using cURL Commands
+
+**Health Check:**
+```bash
+curl -X GET http://localhost:7860/api/health
+```
+
+**Text-to-Speech (English):**
+```bash
+curl -X POST http://localhost:7860/api/text-to-speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello, this is a test of the API",
+    "language_code": "en-US"
+  }'
+```
+
+**Text-to-Speech (Urdu):**
+```bash
+curl -X POST http://localhost:7860/api/text-to-speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "السلام علیکم، یہ API کا ٹیسٹ ہے",
+    "language_code": "ur-PK"
+  }'
+```
+
+**Text-to-Speech (Hindi):**
+```bash
+curl -X POST http://localhost:7860/api/text-to-speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "नमस्ते, यह API का परीक्षण है",
+    "language_code": "hi-IN"
+  }'
+```
+
+**Create Video Job:**
+```bash
+curl -X POST http://localhost:7860/api/jobs \
+  -F "source_image=@examples/source_image/people_0.png" \
+  -F "driven_audio=@examples/driven_audio/imagine.wav" \
+  -F "preprocess=crop" \
+  -F "still_mode=false" \
+  -F "use_enhancer=false"
+```
+
+**Check Job Status:**
+```bash
+curl -X GET http://localhost:7860/api/jobs/{job_id}
+```
+
+#### Using Postman
+
+1. **Import Collection**: Import the API collection if available
+2. **Set Base URL**: `http://localhost:7860`
+3. **Test Endpoints**:
+   - `GET /api/health`
+   - `POST /api/text-to-speech`
+   - `POST /api/jobs`
+   - `GET /api/jobs/{job_id}`
+
+### Method 3: Using Python Scripts
+
+Create a test script `test_apis.py`:
+
+```python
+import requests
+import json
+import time
+
+# Base URL
+BASE_URL = "http://localhost:7860"
+
+def test_health():
+    """Test health endpoint"""
+    response = requests.get(f"{BASE_URL}/api/health")
+    print("Health Check:", response.json())
+    return response.status_code == 200
+
+def test_text_to_speech():
+    """Test TTS endpoint"""
+    data = {
+        "text": "Hello, this is a test",
+        "language_code": "en-US"
+    }
+    response = requests.post(f"{BASE_URL}/api/text-to-speech", json=data)
+    print("TTS Response:", response.json())
+    return response.status_code == 200
+
+def test_create_job():
+    """Test job creation"""
+    files = {
+        'source_image': open('examples/source_image/people_0.png', 'rb'),
+        'driven_audio': open('examples/driven_audio/imagine.wav', 'rb')
+    }
+    data = {
+        'preprocess': 'crop',
+        'still_mode': 'false',
+        'use_enhancer': 'false'
+    }
+    
+    response = requests.post(f"{BASE_URL}/api/jobs", files=files, data=data)
+    result = response.json()
+    print("Job Created:", result)
+    
+    # Close files
+    files['source_image'].close()
+    files['driven_audio'].close()
+    
+    return result.get('job_id')
+
+def test_job_status(job_id):
+    """Test job status checking"""
+    response = requests.get(f"{BASE_URL}/api/jobs/{job_id}")
+    print("Job Status:", response.json())
+    return response.json()
+
+if __name__ == "__main__":
+    print("🧪 Testing SadTalker APIs...")
+    
+    # Test health
+    if test_health():
+        print("✅ Health check passed")
+    else:
+        print("❌ Health check failed")
+        exit(1)
+    
+    # Test TTS
+    if test_text_to_speech():
+        print("✅ TTS test passed")
+    else:
+        print("❌ TTS test failed")
+    
+    # Test job creation
+    job_id = test_create_job()
+    if job_id:
+        print(f"✅ Job created: {job_id}")
+        
+        # Monitor job status
+        for i in range(10):  # Check for 10 iterations
+            status = test_job_status(job_id)
+            if status.get('status') == 'completed':
+                print("✅ Job completed successfully!")
+                break
+            elif status.get('status') == 'failed':
+                print("❌ Job failed")
+                break
+            time.sleep(5)  # Wait 5 seconds
+    else:
+        print("❌ Job creation failed")
+```
+
+Run the test script:
+```bash
+python test_apis.py
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### 1. **Server Won't Start**
+```bash
+# Check if port 7860 is available
+netstat -an | findstr 7860
+
+# Try a different port
+python real_api_server.py --port 8000
+```
+
+#### 2. **Google Cloud Authentication Error**
+```bash
+# Verify credentials file exists
+ls -la revoiz-ai-dd6bb5e7b3ee.json
+
+# Check environment variable
+echo $GOOGLE_APPLICATION_CREDENTIALS
+```
+
+#### 3. **Frontend Can't Connect to API**
+- Ensure API server is running on `http://localhost:7860`
+- Check browser console for CORS errors
+- Verify the API_BASE_URL in demo.html
+
+#### 4. **File Upload Issues**
+- Check file size limits
+- Verify file formats (PNG, JPG, JPEG for images; WAV, MP3, MP4 for audio)
+- Ensure uploads directory exists and is writable
+
+#### 5. **Job Processing Stuck**
+- Check SadTalker model files in `checkpoints/`
+- Verify `inference.py` is working
+- Check system resources (CPU/Memory)
+
+### Debug Mode
+```bash
+# Run with debug logging
+python real_api_server.py --debug
+
+# Check logs
+tail -f logs/api.log
+```
+
 ## 🎮 Usage Examples
 
 ### Text-to-Speech API
