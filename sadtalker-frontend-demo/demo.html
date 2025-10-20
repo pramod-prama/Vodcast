@@ -436,6 +436,56 @@
                             <input type="number" id="poseStyle" min="0" max="45" value="0">
                         </div>
                     </div>
+
+                    <div class="card">
+                        <h3>📺 YouTube Upload</h3>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="uploadToYoutube" style="margin-right: 8px;">
+                                Upload to YouTube after generation
+                            </label>
+                        </div>
+
+                        <div id="youtubeOptions" style="display: none;">
+                            <div class="form-group">
+                                <label>Video Title</label>
+                                <input type="text" id="youtubeTitle" placeholder="Enter YouTube video title">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="youtubeDescription" placeholder="Enter video description" rows="3" style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 6px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tags (comma-separated)</label>
+                                <input type="text" id="youtubeTags" placeholder="AI, SadTalker, Talking Face">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Privacy</label>
+                                <select id="youtubePrivacy">
+                                    <option value="private">Private</option>
+                                    <option value="unlisted">Unlisted</option>
+                                    <option value="public">Public</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="button" class="btn btn-secondary" onclick="setupYouTubeAuth()" style="width: 100%;">
+                                    🔐 Setup YouTube Authorization
+                                </button>
+                            </div>
+
+                            <div id="youtubeAuthHelper" class="form-group" style="display:none;">
+                                <label>Paste Authorization Code</label>
+                                <input type="text" id="youtubeAuthCode" placeholder="Paste code from Google here">
+                                <button type="button" class="btn" onclick="submitYouTubeAuthCode()" style="margin-top:10px;">✅ Submit Code</button>
+                                <div id="youtubeAuthHint" style="font-size: 12px; color: #666; margin-top: 6px;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn" id="createBtn">
@@ -587,6 +637,17 @@
             formData.append('batch_size', document.getElementById('batchSize').value);
             formData.append('size', document.getElementById('size').value);
             formData.append('pose_style', document.getElementById('poseStyle').value);
+            
+            // YouTube upload parameters
+            const uploadToYoutube = document.getElementById('uploadToYoutube').checked;
+            formData.append('upload_to_youtube', uploadToYoutube.toString());
+            
+            if (uploadToYoutube) {
+                formData.append('youtube_title', document.getElementById('youtubeTitle').value);
+                formData.append('youtube_description', document.getElementById('youtubeDescription').value);
+                formData.append('youtube_tags', document.getElementById('youtubeTags').value);
+                formData.append('youtube_privacy', document.getElementById('youtubePrivacy').value);
+            }
 
             const createBtn = document.getElementById('createBtn');
             createBtn.disabled = true;
@@ -671,6 +732,12 @@
                                     Size: ${job.size} | 
                                     Created: ${new Date(job.created_at * 1000).toLocaleString()}
                                 </div>
+                                ${job.upload_to_youtube === 'true' ? `
+                                    <div style="font-size: 14px; color: #666;">
+                                        YouTube: ${job.youtube_status || 'pending'} 
+                                        ${job.youtube_url ? `| <a href="${job.youtube_url}" target="_blank">View Video</a>` : ''}
+                                    </div>
+                                ` : ''}
                                 ${job.image_filename ? `
                                     <div style="font-size: 14px; color: #666;">
                                         Files: ${job.image_filename} + ${job.audio_filename}
@@ -829,9 +896,77 @@
             }
         }
 
+        // YouTube checkbox toggle
+        function toggleYouTubeOptions() {
+            const checkbox = document.getElementById('uploadToYoutube');
+            const options = document.getElementById('youtubeOptions');
+            
+            if (checkbox.checked) {
+                options.style.display = 'block';
+            } else {
+                options.style.display = 'none';
+            }
+        }
+
+        // Setup YouTube authorization
+        async function setupYouTubeAuth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/youtube/auth`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Open auth URL in a new tab and DON'T auto-close
+                    const authWindow = window.open(data.auth_url, '_blank');
+
+                    // Reveal inline helper for pasting code
+                    document.getElementById('youtubeAuthHelper').style.display = 'block';
+                    const hint = document.getElementById('youtubeAuthHint');
+                    hint.textContent = 'Google page nay code dikhaya to usay copy karke yahan paste karein, phir "Submit Code" dabayein.';
+
+                    // Fallback if popup blocked
+                    if (!authWindow || authWindow.closed) {
+                        hint.innerHTML = `Agar popup block ho gaya hai, <a href="${data.auth_url}" target="_blank">is link</a> par click karein.`;
+                    }
+                } else {
+                    alert('Setup failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('YouTube auth setup error:', error);
+                alert('Failed to setup YouTube authorization');
+            }
+        }
+
+        async function submitYouTubeAuthCode() {
+            const code = document.getElementById('youtubeAuthCode').value.trim();
+            if (!code) {
+                alert('Please paste the authorization code');
+                return;
+            }
+            try {
+                const callbackResponse = await fetch(`${API_BASE_URL}/api/youtube/auth/callback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_code: code })
+                });
+                const callbackData = await callbackResponse.json();
+                if (callbackResponse.ok) {
+                    alert('YouTube authorization completed successfully!');
+                    // Hide helper after success
+                    document.getElementById('youtubeAuthHelper').style.display = 'none';
+                    document.getElementById('youtubeAuthCode').value = '';
+                } else {
+                    alert('Authorization failed: ' + (callbackData.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Auth callback error:', e);
+                alert('Failed to submit authorization code');
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('createJobForm').addEventListener('submit', createJob);
+            document.getElementById('uploadToYoutube').addEventListener('change', toggleYouTubeOptions);
             checkHealth();
         });
     </script>

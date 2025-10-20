@@ -56,7 +56,9 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def run_sadtalker_inference(job_id, image_path, audio_path, preprocess='crop', still_mode='false', 
-                           use_enhancer='false', batch_size='1', size='256', pose_style='0'):
+                           use_enhancer='false', batch_size='1', size='256', pose_style='0', 
+                           upload_to_youtube_flag='false', youtube_title='', youtube_description='', 
+                           youtube_tags='', youtube_privacy='private'):
     """Run SadTalker inference using the inference.py script"""
     try:
         # Create result directory for this job
@@ -140,6 +142,35 @@ def run_sadtalker_inference(job_id, image_path, audio_path, preprocess='crop', s
                 print(f"Uploaded to GCS: {public_url}")
                 print("reached")
 
+                # YouTube upload if requested
+                youtube_result = None
+                if upload_to_youtube_flag.lower() == 'true':
+                    print(f"Starting YouTube upload for job {job_id}")
+                    jobs[job_id]['youtube_status'] = 'uploading'
+                    
+                    # Prepare YouTube metadata
+                    title = youtube_title or f"SadTalker Generated Video - {job_id[:8]}"
+                    description = youtube_description or f"AI-generated talking face video created with SadTalker. Job ID: {job_id}"
+                    tags = [tag.strip() for tag in youtube_tags.split(',') if tag.strip()] if youtube_tags else ['SadTalker', 'AI', 'Talking Face']
+                    
+                    youtube_result = upload_to_youtube(
+                        video_path=output_path,
+                        title=title,
+                        description=description,
+                        tags=tags,
+                        privacy_status=youtube_privacy
+                    )
+                    
+                    if youtube_result['success']:
+                        jobs[job_id]['youtube_status'] = 'completed'
+                        jobs[job_id]['youtube_url'] = youtube_result['video_url']
+                        jobs[job_id]['youtube_video_id'] = youtube_result['video_id']
+                        print(f"YouTube upload successful: {youtube_result['video_url']}")
+                    else:
+                        jobs[job_id]['youtube_status'] = 'failed'
+                        jobs[job_id]['youtube_error'] = youtube_result['error']
+                        print(f"YouTube upload failed: {youtube_result['error']}")
+
                 jobs[job_id]['status'] = 'completed'
                 jobs[job_id]['progress'] = 100
                 jobs[job_id]['result_path'] = output_path
@@ -156,6 +187,63 @@ def run_sadtalker_inference(job_id, image_path, audio_path, preprocess='crop', s
         jobs[job_id]['status'] = 'failed'
         jobs[job_id]['error'] = str(e)
 
+@app.route('/api/youtube/auth', methods=['GET'])
+def youtube_auth():
+    """Initialize YouTube OAuth flow"""
+    try:
+        if not os.path.exists(YOUTUBE_CLIENT_SECRETS_FILE):
+            return jsonify({
+                'error': f'YouTube client secrets file not found: {YOUTUBE_CLIENT_SECRETS_FILE}',
+                'setup_required': True
+            }), 400
+        
+        flow = Flow.from_client_secrets_file(YOUTUBE_CLIENT_SECRETS_FILE, YOUTUBE_SCOPES)
+        flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+        
+        auth_url, _ = flow.authorization_url(prompt='consent')
+        
+        return jsonify({
+            'auth_url': auth_url,
+            'message': 'Visit the URL to authorize YouTube access',
+            'setup_required': False
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'YouTube auth setup failed: {str(e)}',
+            'setup_required': True
+        }), 500
+
+@app.route('/api/youtube/auth/callback', methods=['POST'])
+def youtube_auth_callback():
+    """Complete YouTube OAuth flow with authorization code"""
+    try:
+        data = request.get_json()
+        auth_code = data.get('auth_code', '').strip()
+        
+        if not auth_code:
+            return jsonify({'error': 'Authorization code is required'}), 400
+        
+        flow = Flow.from_client_secrets_file(YOUTUBE_CLIENT_SECRETS_FILE, YOUTUBE_SCOPES)
+        flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+        
+        flow.fetch_token(code=auth_code)
+        creds = flow.credentials
+        
+        # Save credentials
+        with open(YOUTUBE_TOKEN_FILE, 'wb') as token:
+            pickle.dump(creds, token)
+        
+        return jsonify({
+            'success': True,
+            'message': 'YouTube authorization completed successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'YouTube auth callback failed: {str(e)}'
+        }), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -169,8 +257,113 @@ def health_check():
 import requests
 from google.oauth2 import service_account
 import google.auth.transport.requests
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
+from google_auth_oauthlib.flow import Flow
+from google.auth.transport.requests import Request
+import pickle
 
 GCS_CREDENTIALS_FILE = os.path.join(os.getcwd(), "revoiz-ai-dd6bb5e7b3ee.json")
+
+# YouTube API Configuration
+YOUTUBE_CLIENT_SECRETS_FILE = os.path.join(os.getcwd(), "youtube_client_secrets.json")
+YOUTUBE_TOKEN_FILE = os.path.join(os.getcwd(), "youtube_token.pickle")
+YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+
+def get_youtube_service():
+    """Get authenticated YouTube service"""
+    creds = None
+    
+    # Load existing token
+    if os.path.exists(YOUTUBE_TOKEN_FILE):
+        with open(YOUTUBE_TOKEN_FILE, 'rb') as token:
+            creds = pickle.load(token)
+    
+    # If no valid credentials, get new ones
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            if not os.path.exists(YOUTUBE_CLIENT_SECRETS_FILE):
+                raise FileNotFoundError(f"YouTube client secrets file not found: {YOUTUBE_CLIENT_SECRETS_FILE}")
+            
+            flow = Flow.from_client_secrets_file(YOUTUBE_CLIENT_SECRETS_FILE, YOUTUBE_SCOPES)
+            flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+            
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            print(f"Please visit this URL to authorize the application: {auth_url}")
+            auth_code = input('Enter the authorization code: ')
+            flow.fetch_token(code=auth_code)
+            creds = flow.credentials
+        
+        # Save credentials for next run
+        with open(YOUTUBE_TOKEN_FILE, 'wb') as token:
+            pickle.dump(creds, token)
+    
+    return build('youtube', 'v3', credentials=creds)
+
+def upload_to_youtube(video_path, title, description="", tags=None, privacy_status="private"):
+    """Upload video to YouTube"""
+    try:
+        youtube = get_youtube_service()
+        
+        # Prepare video metadata
+        body = {
+            'snippet': {
+                'title': title,
+                'description': description,
+                'tags': tags or [],
+                'categoryId': '22'  # People & Blogs category
+            },
+            'status': {
+                'privacyStatus': privacy_status  # private, public, unlisted
+            }
+        }
+        
+        # Create media upload object
+        media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+        
+        # Insert video
+        insert_request = youtube.videos().insert(
+            part=','.join(body.keys()),
+            body=body,
+            media_body=media
+        )
+        
+        # Execute upload
+        response = None
+        while response is None:
+            status, response = insert_request.next_chunk()
+            if status:
+                print(f"Upload progress: {int(status.progress() * 100)}%")
+        
+        if 'id' in response:
+            video_id = response['id']
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            return {
+                'success': True,
+                'video_id': video_id,
+                'video_url': video_url,
+                'title': title
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Upload failed - no video ID returned'
+            }
+            
+    except HttpError as e:
+        return {
+            'success': False,
+            'error': f'YouTube API error: {e}'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Upload error: {str(e)}'
+        }
+
 def get_google_access_token():
     """Fetch OAuth2 access token using service account"""
     credentials = service_account.Credentials.from_service_account_file(
@@ -209,6 +402,7 @@ def text_to_speech():
         
         # Get access token
         access_token = get_google_access_token()
+        print(f"Access token---->: {access_token}")
         
         # Configure voice parameters based on language
         voice_config = {
@@ -313,6 +507,13 @@ def create_job():
     size = request.form.get('size', '256')
     pose_style = request.form.get('pose_style', '0')
     
+    # YouTube upload parameters
+    upload_to_youtube_flag = request.form.get('upload_to_youtube', 'false')
+    youtube_title = request.form.get('youtube_title', '')
+    youtube_description = request.form.get('youtube_description', '')
+    youtube_tags = request.form.get('youtube_tags', '')
+    youtube_privacy = request.form.get('youtube_privacy', 'private')
+    
     # Check if files were uploaded
     if 'source_image' not in request.files or 'driven_audio' not in request.files:
         return jsonify({'error': 'Both source_image and driven_audio files are required'}), 400
@@ -349,13 +550,19 @@ def create_job():
         'size': size,
         'pose_style': pose_style,
         'image_path': image_path,
-        'audio_path': audio_path
+        'audio_path': audio_path,
+        'upload_to_youtube': upload_to_youtube_flag,
+        'youtube_title': youtube_title,
+        'youtube_description': youtube_description,
+        'youtube_tags': youtube_tags,
+        'youtube_privacy': youtube_privacy
     }
     
     # Start background processing
     thread = threading.Thread(target=run_sadtalker_inference, args=(
         job_id, image_path, audio_path, preprocess, still_mode, 
-        use_enhancer, batch_size, size, pose_style
+        use_enhancer, batch_size, size, pose_style, upload_to_youtube_flag,
+        youtube_title, youtube_description, youtube_tags, youtube_privacy
     ))
     thread.daemon = True
     thread.start()
@@ -414,6 +621,12 @@ if __name__ == '__main__':
     print("   GET  /api/jobs - List all jobs")
     print("   GET  /api/jobs/<job_id> - Get job status")
     print("   GET  /api/results/<job_id>/<filename> - Download result files")
+    print("   GET  /api/youtube/auth - Initialize YouTube OAuth")
+    print("   POST /api/youtube/auth/callback - Complete YouTube OAuth")
+    print("\n🎥 YouTube Integration:")
+    print("   - Set upload_to_youtube=true in job creation")
+    print("   - Provide youtube_title, youtube_description, youtube_tags, youtube_privacy")
+    print("   - Videos will be uploaded to your YouTube channel after generation")
     print("\n🧪 You can now test with Postman or run test_api.py")
     
     app.run(host='0.0.0.0', port=7860, debug=True)

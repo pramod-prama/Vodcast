@@ -6,6 +6,7 @@ This repository includes a comprehensive SadTalker API system with multi-languag
 
 - **🎭 SadTalker Integration**: Generate talking face videos from images and audio
 - **🌍 Multi-Language TTS**: Google Cloud TTS supporting English, Urdu, and Hindi
+- **📺 YouTube Upload**: Automatic video upload to YouTube channel after generation
 - **⚡ Async Processing**: Background job processing with real-time progress updates
 - **☁️ Cloud Storage**: Google Cloud Storage integration for scalable file management
 - **🎨 Modern Frontend**: React-based web interface with real-time updates
@@ -19,6 +20,7 @@ This repository includes a comprehensive SadTalker API system with multi-languag
     - `source_image` (file)
     - `driven_audio` (file)
     - Optional fields: `preprocess`, `still_mode`, `use_enhancer`, `batch_size`, `size`, `pose_style`
+    - YouTube fields: `upload_to_youtube`, `youtube_title`, `youtube_description`, `youtube_tags`, `youtube_privacy`
   - Response: `{ "status": "ok", "job_id": "<uuid>" }`
 
 - **GET** `/api/jobs/{job_id}`
@@ -28,6 +30,16 @@ This repository includes a comprehensive SadTalker API system with multi-languag
 - **POST** `/api/text-to-speech`
   - JSON body: `{ "text": "Your text", "language_code": "en-US" }`
   - Response: `{ "status": "success", "audio_data": "base64_encoded_mp3", "filename": "..." }`
+
+### YouTube Integration
+- **GET** `/api/youtube/auth`
+  - Initialize YouTube OAuth flow
+  - Response: `{ "auth_url": "...", "message": "..." }`
+
+- **POST** `/api/youtube/auth/callback`
+  - Complete YouTube OAuth with authorization code
+  - Body: `{ "auth_code": "..." }`
+  - Response: `{ "success": true, "message": "..." }`
 
 ### System Health
 - **GET** `/api/health`
@@ -45,6 +57,50 @@ Each language includes multiple voice options:
 - **English**: 18 voices (US, UK, Australian accents, Male/Female)
 - **Urdu**: 4 voices (Pakistani Urdu, Male/Female)
 - **Hindi**: 4 voices (Indian Hindi, Male/Female)
+
+## 📺 YouTube Integration Setup
+
+### Prerequisites
+1. Google Cloud Console account
+2. YouTube channel
+3. YouTube Data API v3 enabled
+
+### Quick Setup
+1. **Create OAuth Credentials**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create new project or select existing
+   - Enable YouTube Data API v3
+   - Create OAuth 2.0 credentials (Desktop application)
+   - Download JSON file as `youtube_client_secrets.json`
+
+2. **Configure OAuth Consent Screen**:
+   - Add your email as test user
+   - Add YouTube Data API v3 scope
+
+3. **First Time Authorization**:
+   ```bash
+   python real_api_server.py
+   # Open http://localhost:7860
+   # Go to Create Job tab
+   # Check "Upload to YouTube after generation"
+   # Click "Setup YouTube Authorization"
+   # Complete OAuth flow
+   ```
+
+### Usage
+```bash
+# Create job with YouTube upload
+curl -X POST http://localhost:7860/api/jobs \
+  -F "source_image=@image.jpg" \
+  -F "driven_audio=@audio.wav" \
+  -F "upload_to_youtube=true" \
+  -F "youtube_title=My Video" \
+  -F "youtube_description=Video description" \
+  -F "youtube_tags=AI,SadTalker" \
+  -F "youtube_privacy=private"
+```
+
+**Detailed setup guide**: See [YOUTUBE_SETUP_GUIDE.md](YOUTUBE_SETUP_GUIDE.md)
 
 ## 🔧 Configuration
 
