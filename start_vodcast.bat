@@ -76,7 +76,7 @@ echo.
 :: Start the API server
 echo 🚀 Starting SadTalker API Server...
 echo    Server will be available at: http://localhost:7860
-echo    Frontend will be available at: http://localhost:7860 (same URL)
+echo    Frontend (demo.html) will auto-open now
 echo.
 echo 📝 Available endpoints:
 echo    - GET  /api/health - Health check
@@ -95,6 +95,14 @@ echo.
 echo ⚠️  Press Ctrl+C to stop the server
 echo ========================================
 echo.
+
+:: Auto-open frontend (demo.html)
+if exist "sadtalker-frontend-demo\demo.html" (
+    echo 🌐 Opening frontend: sadtalker-frontend-demo\demo.html
+    start "" "%CD%\sadtalker-frontend-demo\demo.html"
+) else (
+    echo ⚠️  demo.html not found at sadtalker-frontend-demo\demo.html
+)
 
 :: Start the server
 python real_api_server.py
